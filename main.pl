@@ -2,30 +2,142 @@
 :- consult('interface.pl').
 :- consult('ajudas.pl').
 
-
-
 % ============================================================================
-% SISTEMA DE PERGUNTAS ALEATÓRIAS
+% MENU DE SELEÇÃO DE TEMA/MODALIDADE
 % ============================================================================
 
-% Lista de todos os ficheiros de perguntas disponíveis
-ficheiros_perguntas(['perguntas1.pl', 'perguntas2.pl', 'perguntas3.pl', 'perguntas4.pl', 'perguntas5.pl', 'perguntas6.pl', 'perguntas7.pl', 'perguntas8.pl', 'perguntas9.pl', 'perguntas9.pl', 'perguntas10.pl']).
+% Menu principal de seleção de modo
+mostrar_menu_tema :-
+    limpar_tela,
+    writeln('╔═══════════════════════════════════════════════════════════════╗'),
+    writeln('║                  SELECIONE O MODO DE JOGO                     ║'),
+    writeln('╠═══════════════════════════════════════════════════════════════╣'),
+    writeln('║                                                               ║'),
+    writeln('║  [1] Modo Geral                                               ║'),
+    writeln('║                                                               ║'),
+    writeln('║  [2] Versão Futebol ⚽                                        ║'),
+    writeln('║                                                               ║'),
+    writeln('║  [3] Versão Cultura Portuguesa 🇵🇹                            ║'),
+    writeln('║                                                               ║'),
+    writeln('╚═══════════════════════════════════════════════════════════════╝'),
+    writeln(''),
+    write('Sua escolha: ').
 
-% Seleciona e carrega um ficheiro de perguntas aleatoriamente
-carregar_perguntas_aleatorias :-
-    ficheiros_perguntas(Ficheiros),
+% ============================================================================
+% SISTEMA DE PERGUNTAS ALEATÓRIAS POR TEMA
+% ============================================================================
+
+% Lista de ficheiros por tema
+ficheiros_tema(geral, ['perguntas1.pl', 'perguntas2.pl', 'perguntas3.pl', 
+                       'perguntas4.pl', 'perguntas5.pl', 'perguntas6.pl', 
+                       'perguntas7.pl', 'perguntas8.pl', 'perguntas9.pl', 
+                       'perguntas10.pl']).
+
+ficheiros_tema(futebol, ['MilionárioFutebol/perguntas1.pl', 
+                         'MilionárioFutebol/perguntas2.pl', 
+                         'MilionárioFutebol/perguntas3.pl', 
+                         'MilionárioFutebol/perguntas4.pl', 
+                         'MilionárioFutebol/perguntas5.pl']).
+
+ficheiros_tema(cultura_portuguesa, ['MilionárioCulturaPortuguesa/perguntas1.pl', 
+                                    'MilionárioCulturaPortuguesa/perguntas2.pl', 
+                                    'MilionárioCulturaPortuguesa/perguntas3.pl', 
+                                    'MilionárioCulturaPortuguesa/perguntas4.pl', 
+                                    'MilionárioCulturaPortuguesa/perguntas5.pl']).
+
+% Carrega um ficheiro de perguntas aleatoriamente conforme o tema
+carregar_perguntas_aleatorias(Tema) :-
+    ficheiros_tema(Tema, Ficheiros),
     length(Ficheiros, NumFicheiros),
     random(0, NumFicheiros, Indice),
     nth0(Indice, Ficheiros, FicheiroEscolhido),
     
-    % Mostra qual ficheiro foi escolhido (para debug/transparência)
-   % format('~n🎲 Ficheiro de perguntas selecionado: ~w 🎲~n~n', [FicheiroEscolhido]),
-   % sleep(1),
-    
-    % Carrega o ficheiro escolhido
-    consult(FicheiroEscolhido).
+    % Verifica se o ficheiro existe antes de carregar
+    (exists_file(FicheiroEscolhido) ->
+        consult(FicheiroEscolhido)
+    ;
+        writeln('❌ ERRO: Ficheiro não encontrado!'),
+        format('  Procurando: ~w~n', [FicheiroEscolhido]),
+        halt(1)
+    ).
 
+% Mostra o logo conforme o tema
+mostrar_logo_tema(geral) :- mostrar_logo.
+mostrar_logo_tema(futebol) :- mostrar_logo_futebol.
+mostrar_logo_tema(cultura_portuguesa) :- mostrar_logo_cultura_portuguesa.
 
+% ============================================================================
+% FLUXO PRINCIPAL DO JOGO - VERSÃO SIMPLIFICADA
+% ============================================================================
+
+jogar :-
+    limpar_tela,
+    mostrar_menu_tema,
+    read_line_to_string(user_input, Escolha),
+    tratar_escolha_tema(Escolha).
+
+% Trata a escolha do tema
+tratar_escolha_tema("1") :-
+    iniciar_jogo_tema(geral).
+
+tratar_escolha_tema("2") :-
+    iniciar_jogo_tema(futebol).
+
+tratar_escolha_tema("3") :-
+    iniciar_jogo_tema(cultura_portuguesa).
+
+tratar_escolha_tema(_) :-
+    writeln('❌ Escolha inválida! Selecione 1, 2 ou 3.'),
+    sleep(2),
+    jogar.
+
+% Inicia o jogo com um tema específico
+iniciar_jogo_tema(Tema) :-
+    limpar_tela,
+    mostrar_logo_tema(Tema),
+    mostrar_boas_vindas_tema(Tema),
+    read_line_to_string(user_input, _),
+    iniciar_jogo_com_tema(Tema).
+
+% Mostra boas-vindas específicas por tema
+mostrar_boas_vindas_tema(geral) :-
+    writeln(''),
+    writeln('Bem-vindo ao QUEM QUER SER MILIONÁRIO!'),
+    writeln(''),
+    writeln('Responda 20 perguntas e ganhe até €1.000.000!'),
+    writeln('Você tem 3 ajudas: 50/50, Ajuda do Público e Telefone.'),
+    writeln(''),
+    write('Pressione ENTER para começar...').
+
+mostrar_boas_vindas_tema(futebol) :-
+    writeln(''),
+    writeln('Bem-vindo ao QUEM QUER SER MILIONÁRIO - VERSÃO FUTEBOL! ⚽'),
+    writeln(''),
+    writeln('Testa os teus conhecimentos sobre o mundo do futebol!'),
+    writeln('Responda 20 perguntas e ganhe até €1.000.000!'),
+    writeln('Você tem 3 ajudas: 50/50, Ajuda do Público e Telefone.'),
+    writeln(''),
+    write('Pressione ENTER para começar...').
+
+mostrar_boas_vindas_tema(cultura_portuguesa) :-
+    writeln(''),
+    writeln('Bem-vindo ao QUEM QUER SER MILIONÁRIO - VERSÃO CULTURA PORTUGUESA! 🇵🇹'),
+    writeln(''),
+    writeln('Testa os teus conhecimentos sobre Portugal e sua cultura!'),
+    writeln('Responda 20 perguntas e ganhe até €1.000.000!'),
+    writeln('Você tem 3 ajudas: 50/50, Ajuda do Público e Telefone.'),
+    writeln(''),
+    write('Pressione ENTER para começar...').
+
+% Inicializa o jogo com tema específico
+iniciar_jogo_com_tema(Tema) :-
+    limpar_tela,
+    carregar_perguntas_aleatorias(Tema),
+    loop_jogo(1, 0, [ajuda_50_50, ajuda_publico, telefone]).
+
+% ============================================================================
+% REGRAS DO JOGO
+% ============================================================================
 
 % Níveis de dificuldade das perguntas
 nivel_dificuldade(N, 'Fácil') :- N >= 1, N =< 5.
@@ -88,25 +200,8 @@ demonstrar_logica :-
     mostrar_demonstracao_logica.
 
 % ============================================================================
-% FLUXO PRINCIPAL DO JOGO
+% LOOP DO JOGO
 % ============================================================================
-
-
-jogar :-
-    limpar_tela,
-    mostrar_logo,
-    mostrar_boas_vindas,
-    read_line_to_string(user_input, _),
-    iniciar_jogo.
-
-% Inicializa o jogo
-iniciar_jogo :-
-    limpar_tela,
-    
-    % Carrega um ficheiro de perguntas aleatoriamente
-    carregar_perguntas_aleatorias,
-    
-    loop_jogo(1, 0, [ajuda_50_50, ajuda_publico, telefone]).
 
 % Loop principal do jogo (recursivo)
 loop_jogo(Nivel, Dinheiro, _) :-
@@ -214,7 +309,7 @@ calcular_dinheiro_erro_desistir(NivelAtual, _, DinheiroFinal) :-
     ;   max_list(Patamares, DinheiroFinal)
     ).
 
-
+% Utilidades
 upcase_escolha(String, Atom) :-
     string_upper(String, Upper),
     atom_string(Atom, Upper).
