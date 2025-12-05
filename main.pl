@@ -28,10 +28,10 @@ mostrar_menu_tema :-
 % ============================================================================
 
 % Lista de ficheiros por tema
-ficheiros_tema(geral, ['perguntas1.pl', 'perguntas2.pl', 'perguntas3.pl', 
-                       'perguntas4.pl', 'perguntas5.pl', 'perguntas6.pl', 
-                       'perguntas7.pl', 'perguntas8.pl', 'perguntas9.pl', 
-                       'perguntas10.pl']).
+ficheiros_tema(geral, ['Geral/perguntas1.pl', 'Geral/perguntas2.pl', 'Geral/perguntas3.pl', 
+                       'Geral/perguntas4.pl', 'Geral/perguntas5.pl', 'Geral/perguntas6.pl', 
+                       'Geral/perguntas7.pl', 'Geral/perguntas8.pl', 'Geral/perguntas9.pl', 
+                       'Geral/perguntas10.pl']).
 
 ficheiros_tema(futebol, ['MilionárioFutebol/perguntas1.pl', 
                          'MilionárioFutebol/perguntas2.pl', 
