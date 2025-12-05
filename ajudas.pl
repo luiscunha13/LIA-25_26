@@ -15,20 +15,26 @@ usar_ajuda(AjudasDisponiveis, NovasAjudas, Texto, Opcoes, RespostaCorreta) :-
     processar_escolha_ajuda(Escolha, AjudasDisponiveis, NovasAjudas, 
                             Texto, Opcoes, RespostaCorreta).
 
-% Mostra menu de ajudas disponíveis
-mostrar_menu_ajudas([], _).
-mostrar_menu_ajudas([ajuda_50_50|Resto], N) :-
-    format('  [~w] - 50/50 (Elimina duas respostas incorretas)~n', [N]),
-    N1 is N + 1,
-    mostrar_menu_ajudas(Resto, N1).
-mostrar_menu_ajudas([ajuda_publico|Resto], N) :-
-    format('  [~w] - Ajuda do Público (Mostra distribuição percentual)~n', [N]),
-    N1 is N + 1,
-    mostrar_menu_ajudas(Resto, N1).
-mostrar_menu_ajudas([telefone|Resto], N) :-
-    format('  [~w] - Telefone (Consulta um amigo)~n', [N]),
-    N1 is N + 1,
-    mostrar_menu_ajudas(Resto, N1).
+% Mostra menu de ajudas com numeração fixa
+mostrar_menu_ajudas(AjudasDisponiveis, _) :-
+    % Opção 1 - 50/50
+    (member(ajuda_50_50, AjudasDisponiveis) ->
+        writeln('  [1] - 50/50 (Elimina duas respostas incorretas)')
+    ;
+        writeln('  [X] - 50/50 (Já utilizada)')
+    ),
+    % Opção 2 - Ajuda do Público
+    (member(ajuda_publico, AjudasDisponiveis) ->
+        writeln('  [2] - Ajuda do Público (Mostra distribuição percentual)')
+    ;
+        writeln('  [X] - Ajuda do Público (Já utilizada)')
+    ),
+    % Opção 3 - Telefone
+    (member(telefone, AjudasDisponiveis) ->
+        writeln('  [3] - Telefone (Consulta um amigo)')
+    ;
+        writeln('  [X] - Telefone (Já utilizada)')
+    ).
 
 % Processamento da escolha de ajuda
 processar_escolha_ajuda('0', Ajudas, Ajudas, _, _, _) :-
@@ -36,6 +42,7 @@ processar_escolha_ajuda('0', Ajudas, Ajudas, _, _, _) :-
     mostrar_voltar_jogo,
     sleep(1).
 
+% Opção 1 - 50/50
 processar_escolha_ajuda('1', Ajudas, NovasAjudas, _, Opcoes, RespostaCorreta) :-
     member(ajuda_50_50, Ajudas),
     !,
@@ -45,6 +52,14 @@ processar_escolha_ajuda('1', Ajudas, NovasAjudas, _, Opcoes, RespostaCorreta) :-
     write('Pressione ENTER para continuar...'),
     read_line_to_string(user_input, _).
 
+processar_escolha_ajuda('1', Ajudas, Ajudas, _, _, _) :-
+    \+ member(ajuda_50_50, Ajudas),
+    !,
+    writeln(''),
+    writeln('❌ Esta ajuda já foi utilizada!'),
+    sleep(1).
+
+% Opção 2 - Ajuda do Público
 processar_escolha_ajuda('2', Ajudas, NovasAjudas, _, _, RespostaCorreta) :-
     member(ajuda_publico, Ajudas),
     !,
@@ -54,6 +69,14 @@ processar_escolha_ajuda('2', Ajudas, NovasAjudas, _, _, RespostaCorreta) :-
     write('Pressione ENTER para continuar...'),
     read_line_to_string(user_input, _).
 
+processar_escolha_ajuda('2', Ajudas, Ajudas, _, _, _) :-
+    \+ member(ajuda_publico, Ajudas),
+    !,
+    writeln(''),
+    writeln('❌ Esta ajuda já foi utilizada!'),
+    sleep(1).
+
+% Opção 3 - Telefone
 processar_escolha_ajuda('3', Ajudas, NovasAjudas, _, _, RespostaCorreta) :-
     member(telefone, Ajudas),
     !,
@@ -63,6 +86,14 @@ processar_escolha_ajuda('3', Ajudas, NovasAjudas, _, _, RespostaCorreta) :-
     write('Pressione ENTER para continuar...'),
     read_line_to_string(user_input, _).
 
+processar_escolha_ajuda('3', Ajudas, Ajudas, _, _, _) :-
+    \+ member(telefone, Ajudas),
+    !,
+    writeln(''),
+    writeln('❌ Esta ajuda já foi utilizada!'),
+    sleep(1).
+
+% Opção inválida
 processar_escolha_ajuda(_, Ajudas, Ajudas, _, _, _) :-
     mostrar_ajuda_invalida,
     sleep(1).

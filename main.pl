@@ -1,7 +1,31 @@
 % Importação de modulos
-:- consult('perguntas.pl').
 :- consult('interface.pl').
 :- consult('ajudas.pl').
+
+
+
+% ============================================================================
+% SISTEMA DE PERGUNTAS ALEATÓRIAS
+% ============================================================================
+
+% Lista de todos os ficheiros de perguntas disponíveis
+ficheiros_perguntas(['perguntas1.pl', 'perguntas2.pl', 'perguntas3.pl', 'perguntas4.pl', 'perguntas5.pl', 'perguntas6.pl', 'perguntas7.pl', 'perguntas8.pl', 'perguntas9.pl', 'perguntas9.pl', 'perguntas10.pl']).
+
+% Seleciona e carrega um ficheiro de perguntas aleatoriamente
+carregar_perguntas_aleatorias :-
+    ficheiros_perguntas(Ficheiros),
+    length(Ficheiros, NumFicheiros),
+    random(0, NumFicheiros, Indice),
+    nth0(Indice, Ficheiros, FicheiroEscolhido),
+    
+    % Mostra qual ficheiro foi escolhido (para debug/transparência)
+   % format('~n🎲 Ficheiro de perguntas selecionado: ~w 🎲~n~n', [FicheiroEscolhido]),
+   % sleep(1),
+    
+    % Carrega o ficheiro escolhido
+    consult(FicheiroEscolhido).
+
+
 
 % Níveis de dificuldade das perguntas
 nivel_dificuldade(N, 'Fácil') :- N >= 1, N =< 5.
@@ -78,6 +102,10 @@ jogar :-
 % Inicializa o jogo
 iniciar_jogo :-
     limpar_tela,
+    
+    % Carrega um ficheiro de perguntas aleatoriamente
+    carregar_perguntas_aleatorias,
+    
     loop_jogo(1, 0, [ajuda_50_50, ajuda_publico, telefone]).
 
 % Loop principal do jogo (recursivo)
