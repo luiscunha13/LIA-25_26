@@ -274,4 +274,4 @@ animar_logo_frames(Frames, DelaySeconds, Use256) :-
 % Público: faz a animação e DEIXA o último frame (amarelo) no ecrã
 mostrar_logo_animado :-
     Use256 = true,          % se quiseres fallback: false
-    animar_logo_frames(50, 0.06, Use256).
+    animar_logo_frames(40, 0.06, Use256).

@@ -5,6 +5,148 @@
 
 
 
+
+:- use_module(library(random)).
+
+% ============================
+% STARFIELD (estrelas a piscar nas margens)
+% ============================
+
+cursor_pos(Row, Col) :-
+    format('\033[~d;~dH', [Row, Col]).
+
+ansi_fg_dim    :- write('\033[90m').
+ansi_fg_bright :- write('\033[97m').
+ansi_bg_black  :- write('\033[40m').
+ansi_fg_reset_only :- write('\033[39m').
+ansi_fg_yellow :- write('\033[33m').     % amarelo “normal”
+ansi_fg_yellow_bright :- write('\033[93m'). % amarelo brilhante (se o terminal suportar)
+
+
+draw_star(R, C, bright) :-
+    cursor_pos(R, C),
+    ansi_bg_black,
+    ansi_fg_bright,
+    write('✦'),
+    ansi_fg_reset_only.
+
+draw_star(R, C, dim) :-
+    cursor_pos(R, C),
+    ansi_bg_black,
+    ansi_fg_dim,
+    write('·'),
+    ansi_fg_reset_only.
+
+draw_star(R, C, off) :-
+    cursor_pos(R, C),
+    ansi_bg_black,
+    write(' '),
+    ansi_fg_reset_only.
+
+draw_star(R, C, yellow) :-
+    cursor_pos(R, C),
+    ansi_bg_black,
+    ansi_fg_yellow_bright,   % ou ansi_fg_yellow
+    write('✦'),
+    ansi_fg_reset_only.
+
+
+% zona proibida (centro)
+in_center_zone(C, Cols, CenterPad) :-
+    CenterStart is (Cols // 2) - CenterPad,
+    CenterEnd   is (Cols // 2) + CenterPad,
+    C >= CenterStart,
+    C =< CenterEnd.
+
+% helper: random_between seguro (não rebenta se Min>Max)
+safe_random_between(Min, Max, V) :-
+    (  Min =< Max
+    -> random_between(Min, Max, V)
+    ;  V = Min
+    ).
+
+% gera N posições de estrelas só nas margens
+make_star_positions(N, Cols, Rows, MarginW0, CenterPad0, Positions) :-
+    % --- ajustes para não rebentar em terminais pequenos ---
+    MarginW is min(MarginW0, max(2, Cols // 4)),
+    CenterPad is min(CenterPad0, max(8, (Cols // 2) - MarginW - 2)),
+
+    RMin is 2,
+    RMax0 is Rows - 1,
+    RMax is max(RMin, RMax0),
+
+    LMin is 2,
+    LMax0 is MarginW,
+    LMax is max(LMin, LMax0),
+
+    RightStart0 is Cols - MarginW,
+    RightStart is max(2, RightStart0),
+
+    CMax0 is Cols - 1,
+    CMax is max(2, CMax0),
+
+    findall(pos(R,C),
+        ( between(1, N, _),
+
+          safe_random_between(RMin, RMax, R),
+
+          random_between(0, 1, Side),
+          ( Side =:= 0 ->
+              safe_random_between(LMin, LMax, C)
+          ;   safe_random_between(RightStart, CMax, C)
+          ),
+
+          \+ in_center_zone(C, Cols, CenterPad)
+        ),
+        Positions).
+
+% piscar
+render_starfield(Positions, Cols, _Rows, CenterPad, BlinkPct) :-
+    forall(member(pos(R,C), Positions),
+        (   ( in_center_zone(C, Cols, CenterPad) ->
+                true
+            ;   random_between(1, 100, X),
+                ( X =< BlinkPct ->
+                    random_between(1, 4, S),
+                    ( S =:= 1 -> draw_star(R,C,off)
+                    ; S =:= 2 -> draw_star(R,C,dim)
+                    ; S =:= 3 -> draw_star(R,C,bright)
+                    ;           draw_star(R,C,yellow)
+                    )
+
+                ; true )
+            )
+        )),
+    cursor_pos(1,1),
+    flush_output.
+
+% corre starfield por DurationSecs
+starfield_run(_DurationSecs) :-
+    terminal_cols_rows(Cols, Rows),
+
+    % se o terminal for minúsculo, não faz nada (evita bugs)
+    ( Cols < 40 ; Rows < 10 ),
+    !,
+    true.
+
+starfield_run(DurationSecs) :-
+    terminal_cols_rows(Cols, Rows),
+    MarginW = 18,
+    CenterPad = 25,
+    NStars is max(30, Rows * 2),
+    make_star_positions(NStars, Cols, Rows, MarginW, CenterPad, Positions),
+
+    FPS is 14,
+    FrameDelay is 1.0 / FPS,
+    Frames is max(1, round(DurationSecs * FPS)),
+
+    forall(between(1, Frames, _),
+        ( render_starfield(Positions, Cols, Rows, CenterPad, 35),
+          sleep(FrameDelay)
+        )).
+
+
+
 % ============================
 % CORES ANSI
 % ============================
@@ -249,15 +391,15 @@ menu_tema_block(Lines) :-
 % Cabeçalho do jogo (agora mostra pergunta / MaxNivel)
 % ============================================================================
 
-mostrar_cabecalho(Nivel, Dinheiro, Ajudas, NivelDificuldade, MaxNivel) :-
-    writeln('╔═══════════════════════════════════════════════════════════════╗'),
-    format('║  Pergunta: ~w/~w | Dificuldade: ~w | Dinheiro: €~w~*|~n',
-           [Nivel, MaxNivel, NivelDificuldade, Dinheiro, 10]),
-    writeln('╠═══════════════════════════════════════════════════════════════╣'),
-    write('║  Ajudas disponíveis: '),
-    mostrar_ajudas(Ajudas),
-    writeln('╚═══════════════════════════════════════════════════════════════╝'),
-    writeln('').
+% mostrar_cabecalho(Nivel, Dinheiro, Ajudas, NivelDificuldade, MaxNivel) :-
+%     writeln('╔═══════════════════════════════════════════════════════════════╗'),
+%     format('║  Pergunta: ~w/~w | Dificuldade: ~w | Dinheiro: €~w~*|~n',
+%            [Nivel, MaxNivel, NivelDificuldade, Dinheiro, 10]),
+%     writeln('╠═══════════════════════════════════════════════════════════════╣'),
+%     write('║  Ajudas disponíveis: '),
+%     mostrar_ajudas(Ajudas),
+%     writeln('╚═══════════════════════════════════════════════════════════════╝'),
+%     writeln('').
 
 mostrar_ajudas([]) :-
     writeln('Nenhuma                              ║').
@@ -268,15 +410,208 @@ mostrar_ajudas(Ajudas) :-
     (member(telefone, Ajudas) -> write('[Telefone] ') ; true),
     writeln('      ║').
 
+% mostrar_pergunta(Texto, [OpA, OpB, OpC, OpD]) :-
+%     writeln('┌───────────────────────────────────────────────────────────────┐'),
+%     format('│ ~w~*|~n', [Texto, 62]),
+%     writeln('└───────────────────────────────────────────────────────────────┘'),
+%     writeln(''),
+%     format('  A: ~w~n', [OpA]),
+%     format('  B: ~w~n', [OpB]),
+%     format('  C: ~w~n', [OpC]),
+%     format('  D: ~w~n', [OpD]).
+
+% ============================
+% UI do jogo (ASCII + centrado)
+% ============================
+
+mostrar_cabecalho(Nivel, Dinheiro, Ajudas, NivelDificuldade, MaxNivel) :-
+    cabecalho_block(Nivel, Dinheiro, Ajudas, NivelDificuldade, MaxNivel, Lines),
+    print_centered_block(Lines),
+    nl.
+
+cabecalho_block(Nivel, Dinheiro, Ajudas, NivelDificuldade, MaxNivel, Lines) :-
+    % Título pequeno em ASCII (podes trocar se quiseres)
+    % Title = [
+    % "██╗███╗   ██╗███████╗ ██████╗ ",
+    % "██║████╗  ██║██╔════╝██╔═══██╗",
+    % "██║██╔██╗ ██║█████╗  ██║   ██║",
+    % "██║██║╚██╗██║██╔══╝  ██║   ██║",
+    % "██║██║ ╚████║██║     ╚██████╔╝",
+    % "╚═╝╚═╝  ╚═══╝╚═╝      ╚═════╝ "
+    % ],
+
+    Title = [
+    "██╗███╗   ██╗███████╗ ██████╗ ██████╗ ███╗   ███╗ █████╗  ██████╗ █████╗  ██████╗ ",
+    "██║████╗  ██║██╔════╝██╔═══██╗██╔══██╗████╗ ████║██╔══██╗██╔════╝██╔══██╗██╔═══██╗",
+    "██║██╔██╗ ██║█████╗  ██║   ██║██████╔╝██╔████╔██║███████║██║     ███████║██║   ██║",
+    "██║██║╚██╗██║██╔══╝  ██║   ██║██╔══██╗██║╚██╔╝██║██╔══██║██║     ██╔══██║██║   ██║",
+    "██║██║ ╚████║██║     ╚██████╔╝██║  ██║██║ ╚═╝ ██║██║  ██║╚██████╗██║  ██║╚██████╔╝",
+    "╚═╝╚═╝  ╚═══╝╚═╝      ╚═════╝ ╚═╝  ╚═╝╚═╝     ╚═╝╚═╝  ╚═╝ ╚═════╝╚═╝  ╚═╝ ╚═════╝ "
+],
+
+
+
+
+    format(string(Line1),
+           "║  Pergunta: ~w/~w | Dificuldade: ~w | Dinheiro: €~w",
+           [Nivel, MaxNivel, NivelDificuldade, Dinheiro]),
+
+    ajudas_string(Ajudas, AStr),
+    format(string(Line2),
+           "║  Ajudas disponíveis: ~w",
+           [AStr]),
+
+    Box = [
+        "╔════════════════════════════════════════════════════════════════╗",
+        Line1,
+        "╠════════════════════════════════════════════════════════════════╣",
+        Line2,
+        "╚════════════════════════════════════════════════════════════════╝"
+    ],
+
+    pad_box_lines(Box, PaddedBox),
+    append(Title, [""], T1),
+    append(T1, PaddedBox, Lines).
+
+ajudas_string([], "Nenhuma") :- !.
+ajudas_string(Ajudas, S) :-
+    ( member(ajuda_50_50, Ajudas) -> P1 = "[50/50]"   ; P1 = "" ),
+    ( member(ajuda_publico, Ajudas) -> P2 = " [Público]" ; P2 = "" ),
+    ( member(telefone, Ajudas) -> P3 = " [Telefone]" ; P3 = "" ),
+    atomic_list_concat([P1,P2,P3], "", S0),
+    normalize_space(string(S), S0).
+
+
+
+
+% Garante que todas as linhas do "box" têm a mesma largura (80 chars aprox).
+% Se uma linha não tiver o '║ ... ║' completo, corrige.
+pad_box_lines([], []).
+pad_box_lines([L|Ls], [O|Os]) :-
+    ( sub_string(L, 0, 1, _, "╔")
+    ; sub_string(L, 0, 1, _, "╚")
+    ; sub_string(L, 0, 1, _, "╠")
+    ),
+    !,
+    O = L,
+    pad_box_lines(Ls, Os).
+pad_box_lines([L|Ls], [O|Os]) :-
+    % Linha de conteúdo "║ ...": fecha e preenche até 64 interior
+    % (a largura total do box acima é 66: ║ + 64 + ║)
+    ( sub_string(L, 0, 1, _, "║") ->
+        % remove "║  " inicial se existir, e volta a montar
+        ( sub_string(L, 0, _, _, "║") ->
+            % tira o primeiro "║" e possíveis espaços
+            sub_string(L, 1, _, 0, Rest0),
+            normalize_space(string(Rest1), Rest0),
+            % garante que não fica com "║" final duplicado
+            ( sub_string(Rest1, _, 1, 0, "║") ->
+                sub_string(Rest1, 0, _, 1, Rest2)
+            ;   Rest2 = Rest1
+            ),
+            string_length(Rest2, Len),
+            InnerW = 64,
+            Pad is max(0, InnerW - Len),
+            length(Cs, Pad), maplist(=(' '), Cs),
+            string_chars(PadStr, Cs),
+            string_concat(Rest2, PadStr, Mid),
+            format(string(O), "║~w║", [Mid])
+        ; O = L )
+    ; O = L ),
+    pad_box_lines(Ls, Os).
+
 mostrar_pergunta(Texto, [OpA, OpB, OpC, OpD]) :-
-    writeln('┌───────────────────────────────────────────────────────────────┐'),
-    format('│ ~w~*|~n', [Texto, 62]),
-    writeln('└───────────────────────────────────────────────────────────────┘'),
-    writeln(''),
-    format('  A: ~w~n', [OpA]),
-    format('  B: ~w~n', [OpB]),
-    format('  C: ~w~n', [OpC]),
-    format('  D: ~w~n', [OpD]).
+    pergunta_block(Texto, [OpA, OpB, OpC, OpD], Lines),
+    print_centered_block(Lines),
+    nl.
+
+pergunta_block(Texto, [OpA, OpB, OpC, OpD], Lines) :-
+    Title = [
+        "██████╗ ███████╗██████╗  ██████╗ ██╗   ██╗███╗   ██╗████████╗ █████╗ ",
+        "██╔══██╗██╔════╝██╔══██╗██╔════╝ ██║   ██║████╗  ██║╚══██╔══╝██╔══██╗",
+        "██████╔╝█████╗  ██████╔╝██║  ███╗██║   ██║██╔██╗ ██║   ██║   ███████║",
+        "██╔═══╝ ██╔══╝  ██╔══██╗██║   ██║██║   ██║██║╚██╗██║   ██║   ██╔══██║",
+        "██║     ███████╗██║  ██║╚██████╔╝╚██████╔╝██║ ╚████║   ██║   ██║  ██║",
+        "╚═╝     ╚══════╝╚═╝  ╚═╝ ╚═════╝  ╚═════╝ ╚═╝  ╚═══╝   ╚═╝   ╚═╝  ╚═╝"
+    ],
+    Box = [
+        "╔════════════════════════════════════════════════════════════════╗",
+        "║                                                                ║",
+        "╠════════════════════════════════════════════════════════════════╣",
+        "║                                                                ║",
+        "╚════════════════════════════════════════════════════════════════╝"
+    ],
+    % mete o texto no meio (linha 2 do conteúdo)
+    wrap_question_line(Texto, QLine),
+    replace_nth0(1, Box, QLine, Box2),
+
+    format(string(A), "║  A: ~w", [OpA]),
+    format(string(B), "║  B: ~w", [OpB]),
+    format(string(C), "║  C: ~w", [OpC]),
+    format(string(D), "║  D: ~w", [OpD]),
+    Options0 = [
+        "╔════════════════════════════════════════════════════════════════╗",
+        A, B, C, D,
+        "╚════════════════════════════════════════════════════════════════╝"
+    ],
+    pad_box_lines(Options0, Options),
+
+    pad_box_lines(Box2, Box3),
+    append(Title, [""], T1),
+    append(T1, Box3, T2),
+    append(T2, [""], T3),
+    append(T3, Options, Lines).
+
+wrap_question_line(Texto, OutLine) :-
+    % mete o texto numa linha única "║  ... ║" com padding
+    normalize_space(string(T), Texto),
+    string_length(T, Len),
+    InnerW = 64,
+    % corta se for demasiado longo (simples e seguro)
+    ( Len > InnerW -> sub_string(T, 0, InnerW, _, T2) ; T2 = T ),
+    string_length(T2, L2),
+    Pad is max(0, InnerW - L2),
+    length(Cs, Pad), maplist(=(' '), Cs),
+    string_chars(PadStr, Cs),
+    string_concat("  ", T2, Mid0),
+    string_concat(Mid0, PadStr, Mid),
+    format(string(OutLine), "║~w║", [Mid]).
+
+replace_nth0(0, [_|T], X, [X|T]) :- !.
+replace_nth0(N, [H|T], X, [H|R]) :-
+    N > 0, N1 is N - 1,
+    replace_nth0(N1, T, X, R).
+
+mostrar_menu_opcoes :-
+    menu_opcoes_block(Lines),
+    print_centered_block(Lines),
+    nl,
+    write('Escolha uma opção: ').
+
+menu_opcoes_block(Lines) :-
+
+
+    Title = [
+    "███████╗ ███████╗  ██████╗  ██████╗ ██╗     ██╗  ██╗  █████╗ ",
+    "██╔════╝ ██╔════╝ ██╔════╝ ██╔═══██╗██║     ██║  ██║ ██╔══██╗",
+    "█████╗   ███████╗ ██║      ██║   ██║██║     ███████║ ███████║",
+    "██╔══╝   ╚════██║ ██║      ██║   ██║██║     ██╔══██║ ██╔══██║",
+    "███████╗ ███████║ ╚██████╗ ╚██████╔╝███████╗██║  ██║ ██║  ██║",
+    "╚══════╝ ╚══════╝  ╚═════╝  ╚═════╝ ╚══════╝╚═╝  ╚═╝ ╚═╝  ╚═╝"
+],
+
+    Box0 = [
+        "╔════════════════════════════════════════════════════════════════╗",
+        "║  [A/B/C/D] - Responder                                         ║",
+        "║  [H]       - Usar ajuda                                        ║",
+        "║  [Q]       - Desistir e levar o dinheiro                       ║",
+        "╚════════════════════════════════════════════════════════════════╝"
+    ],
+    pad_box_lines(Box0, Box),
+    append(Title, [""], T1),
+    append(T1, Box, Lines).
+
+
 
 mostrar_vitoria(Dinheiro) :-
     writeln(''),
@@ -373,13 +708,13 @@ mostrar_demonstracao_logica :-
 % MENSAGENS DE AJUDAS / FEEDBACK (mantidas)
 % ============================================================================
 
-mostrar_menu_opcoes :-
-    writeln(''),
-    writeln('O que deseja fazer?'),
-    writeln('  [A/B/C/D] - Responder'),
-    writeln('  [H] - Usar ajuda'),
-    writeln('  [Q] - Desistir e levar o dinheiro'),
-    write('Escolha uma opção: ').
+% mostrar_menu_opcoes :-
+%     writeln(''),
+%     writeln('O que deseja fazer?'),
+%     writeln('  [A/B/C/D] - Responder'),
+%     writeln('  [H] - Usar ajuda'),
+%     writeln('  [Q] - Desistir e levar o dinheiro'),
+%     write('Escolha uma opção: ').
 
 mostrar_desistencia(Dinheiro) :-
     writeln(''),

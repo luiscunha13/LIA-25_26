@@ -13,7 +13,7 @@
 
 :- consult('interface.pl').
 :- consult('ajudas.pl').
-:- consult('ranking.pl').
+:- consult('Ranking/ranking.pl').
 :- consult('jogos.pl').
 
 
@@ -29,12 +29,16 @@ jogar :- menu_principal.
 menu_principal :-
     setar_modo_jogo,
     limpar_tela,
-   % pintar_fundo,
-    mostrar_logo_animado,   
+    % pinta o fundo uma vez (opcional mas ajuda no "preto total")
+    pintar_fundo,
+
+    % estrelas a piscar um bocadinho
+    starfield_run(1.5),
+
+    mostrar_logo_animado,
     mostrar_menu_principal,
     read_line_to_string(user_input, Opcao),
     tratar_menu_principal(Opcao).
-
 
 tratar_menu_principal("1") :- !, fluxo_novo_jogo, menu_principal.
 tratar_menu_principal("2") :- !, mostrar_ranking_ui, esperar_enter, menu_principal.
@@ -147,22 +151,22 @@ config_modo(competitivo, grava,     [ajuda_50_50, ajuda_publico, telefone], 20).
 % Carregamento de perguntas por tema (o teu sistema, com limpeza)
 % ============================================================================
 
-ficheiros_tema(geral, ['Geral/perguntas1.pl', 'Geral/perguntas2.pl', 'Geral/perguntas3.pl',
-                       'Geral/perguntas4.pl', 'Geral/perguntas5.pl', 'Geral/perguntas6.pl',
-                       'Geral/perguntas7.pl', 'Geral/perguntas8.pl', 'Geral/perguntas9.pl',
-                       'Geral/perguntas10.pl']).
+ficheiros_tema(geral, ['Temas/Geral/perguntas1.pl', 'Temas/Geral/perguntas2.pl', 'Temas/Geral/perguntas3.pl',
+                       'Temas/Geral/perguntas4.pl', 'Temas/Geral/perguntas5.pl', 'Temas/Geral/perguntas6.pl',
+                       'Temas/Geral/perguntas7.pl', 'Temas/Geral/perguntas8.pl', 'Temas/Geral/perguntas9.pl',
+                       'Temas/Geral/perguntas10.pl']).
 
-ficheiros_tema(futebol, ['MilionárioFutebol/perguntas1.pl',
-                         'MilionárioFutebol/perguntas2.pl',
-                         'MilionárioFutebol/perguntas3.pl',
-                         'MilionárioFutebol/perguntas4.pl',
-                         'MilionárioFutebol/perguntas5.pl']).
+ficheiros_tema(futebol, ['Temas/MilionárioFutebol/perguntas1.pl',
+                         'Temas/MilionárioFutebol/perguntas2.pl',
+                         'Temas/MilionárioFutebol/perguntas3.pl',
+                         'Temas/MilionárioFutebol/perguntas4.pl',
+                         'Temas/MilionárioFutebol/perguntas5.pl']).
 
-ficheiros_tema(cultura_portuguesa, ['MilionárioCulturaPortuguesa/perguntas1.pl',
-                                    'MilionárioCulturaPortuguesa/perguntas2.pl',
-                                    'MilionárioCulturaPortuguesa/perguntas3.pl',
-                                    'MilionárioCulturaPortuguesa/perguntas4.pl',
-                                    'MilionárioCulturaPortuguesa/perguntas5.pl']).
+ficheiros_tema(cultura_portuguesa, ['Temas/MilionárioCulturaPortuguesa/perguntas1.pl',
+                                    'Temas/MilionárioCulturaPortuguesa/perguntas2.pl',
+                                    'Temas/MilionárioCulturaPortuguesa/perguntas3.pl',
+                                    'Temas/MilionárioCulturaPortuguesa/perguntas4.pl',
+                                    'Temas/MilionárioCulturaPortuguesa/perguntas5.pl']).
 
 % carregar_perguntas_aleatorias(Tema) :-
 %     retractall(pergunta(_,_,_,_,_,_)),
@@ -351,6 +355,8 @@ loop_jogo(Nivel, Dinheiro, _Ajudas, MaxNivel, DinheiroFinal, venceu) :-
 loop_jogo(Nivel, DinheiroAtual, Ajudas, MaxNivel, DinheiroFinal, Outcome) :-
     Nivel =< MaxNivel,
     limpar_tela,
+    pintar_fundo, 
+    starfield_run(0.6),
     nivel_dificuldade(Nivel, NivelDificuldade),
 
     selecionar_pergunta(Nivel, ID, ValorPergunta, Texto, Opcoes, RespostaCorreta),
