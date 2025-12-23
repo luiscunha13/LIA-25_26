@@ -29,8 +29,8 @@ jogar :- menu_principal.
 menu_principal :-
     setar_modo_jogo,
     limpar_tela,
-    pintar_fundo,     % 👈 isto é o que te faltava para ficar mesmo preto
-    mostrar_logo,
+   % pintar_fundo,
+    mostrar_logo_animado,   
     mostrar_menu_principal,
     read_line_to_string(user_input, Opcao),
     tratar_menu_principal(Opcao).

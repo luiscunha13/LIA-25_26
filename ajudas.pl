@@ -12,7 +12,7 @@ usar_ajuda(AjudasDisponiveis, NovasAjudas, Texto, Opcoes, RespostaCorreta) :-
     mostrar_menu_ajudas(AjudasDisponiveis),
     writeln('  [0] - Voltar'),
     writeln(''),
-    write('Sua escolha: '),
+    write('Escolha uma opção: '),
     read_line_to_string(user_input, Input),
     atom_string(Escolha, Input),
     processar_escolha_ajuda(Escolha, AjudasDisponiveis, NovasAjudas,

@@ -4,9 +4,12 @@
 
 :- module(ascii_logo, [
     mostrar_logo/0,
+    mostrar_logo_animado/0,
     mostrar_logo_futebol/0,
     mostrar_logo_cultura_portuguesa/0
 ]).
+
+:- use_module(library(lists)).
 
 :- use_module(library(process)).   % process_create/3
 :- use_module(library(readutil)).  % read_line_to_string/2
@@ -180,3 +183,95 @@ mostrar_logo_cultura_portuguesa :-
     badge_cultura(B),
     print_centered_lines(B),
     print_blank_lines(1).
+
+% ============================================================
+% ANIMAÇÃO (shimmer amarelo) - desenha e SOBE o cursor
+% ============================================================
+
+cursor_hide :- write('\033[?25l').
+cursor_show :- write('\033[?25h').
+
+% ansi_reset :- write('\033[0m').
+
+ansi_reset :- write('\033[39m').  % reset SÓ do foreground (mantém o background)
+
+
+ansi_fg256(N) :- format('\033[38;5;~dm', [N]).
+ansi_yellow_basic :- write('\033[33m').  % fallback
+
+yellow_palette([214, 220, 226, 227, 228, 229, 230]).
+
+color_code_for_pos(I, Phase, Code) :-
+    yellow_palette(P),
+    length(P, L),
+    Period is L * 2 - 2,
+    ( Period =< 0 -> nth0(0, P, Code)
+    ; T0 is (I + Phase) mod Period,
+      ( T0 < L -> T = T0 ; T is Period - T0 ),
+      nth0(T, P, Code)
+    ).
+
+write_colored_line(Line, Phase, Use256) :-
+    string_codes(Line, Cs),
+    forall(nth0(I, Cs, C),
+        ( C =:= 0'  ->
+            put_code(C)
+        ;   color_code_for_pos(I, Phase, Code),
+            ( Use256 = true -> ansi_fg256(Code) ; ansi_yellow_basic ),
+            put_code(C),
+            ansi_reset
+        )
+    ),
+    nl.
+
+print_centered_lines_color(Lines, Phase, Use256) :-
+    terminal_cols(Cols),
+    max_line_len(Lines, W),
+    Left is (Cols - W) // 2,
+    forall(member(L, Lines),
+        ( forall(between(1, Left, _), put_code(0' )),
+          write_colored_line(L, Phase, Use256)
+        )
+    ).
+
+% sobe N linhas (cursor up)
+cursor_up(N) :-
+    N > 0,
+    format('\033[~dA', [N]).
+cursor_up(_).
+
+% Faz Frames frames e sobrepõe-os no mesmo sítio
+animar_logo_frames(Frames, DelaySeconds, Use256) :-
+    cursor_hide,
+    logo_lines(Lines),
+    length(Lines, NL),
+    TopBlank = 1,
+    BotBlank = 1,
+    TotalLines is TopBlank + NL + BotBlank,
+
+    % garante que começamos no topo "normal"
+    write('\033[H'),
+    flush_output,
+
+    forall(between(0, Frames, F),
+        (   % desenha frame
+            print_blank_lines(TopBlank),
+            print_centered_lines_color(Lines, F, Use256),
+            print_blank_lines(BotBlank),
+            flush_output,
+            sleep(DelaySeconds),
+
+            % se não for o último, sobe para desenhar por cima
+            ( F < Frames ->
+                cursor_up(TotalLines),
+                flush_output
+            ; true )
+        )
+    ),
+    cursor_show,
+    ansi_reset.
+
+% Público: faz a animação e DEIXA o último frame (amarelo) no ecrã
+mostrar_logo_animado :-
+    Use256 = true,          % se quiseres fallback: false
+    animar_logo_frames(50, 0.06, Use256).
