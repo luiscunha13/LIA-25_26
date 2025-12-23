@@ -17,10 +17,11 @@ mostrar_menu_tema :-
     writeln('║                                                               ║'),
     writeln('║  [2] Versão Futebol ⚽                                        ║'),
     writeln('║                                                               ║'),
-    writeln('║  [3] Versão Cultura Portuguesa 🇵🇹                            ║'),
+    writeln('║  [3] Versão Cultura Portuguesa 🇵🇹                             ║'),
     writeln('║                                                               ║'),
     writeln('╚═══════════════════════════════════════════════════════════════╝'),
     writeln(''),
+    tocar_som_primeiro_menu,
     write('Sua escolha: ').
 
 % ============================================================================
@@ -57,7 +58,7 @@ carregar_perguntas_aleatorias(Tema) :-
         consult(FicheiroEscolhido)
     ;
         writeln('❌ ERRO: Ficheiro não encontrado!'),
-        format('  Procurando: ~w~n', [FicheiroEscolhido]),
+        format('  A procurar: ~w~n', [FicheiroEscolhido]),
         halt(1)
     ).
 
@@ -102,29 +103,32 @@ iniciar_jogo_tema(Tema) :-
 % Mostra boas-vindas específicas por tema
 mostrar_boas_vindas_tema(geral) :-
     writeln(''),
+    tocar_som_main_menu,
     writeln('Bem-vindo ao QUEM QUER SER MILIONÁRIO!'),
     writeln(''),
-    writeln('Responda 20 perguntas e ganhe até €1.000.000!'),
+    writeln('Responda a 20 perguntas e ganhe até €1.000.000!'),
     writeln('Você tem 3 ajudas: 50/50, Ajuda do Público e Telefone.'),
     writeln(''),
     write('Pressione ENTER para começar...').
 
 mostrar_boas_vindas_tema(futebol) :-
+    tocar_som_main_menu,
     writeln(''),
     writeln('Bem-vindo ao QUEM QUER SER MILIONÁRIO - VERSÃO FUTEBOL! ⚽'),
     writeln(''),
-    writeln('Testa os teus conhecimentos sobre o mundo do futebol!'),
-    writeln('Responda 20 perguntas e ganhe até €1.000.000!'),
+    writeln('Teste os seus conhecimentos sobre o mundo do futebol!'),
+    writeln('Responda a 20 perguntas e ganhe até €1.000.000!'),
     writeln('Você tem 3 ajudas: 50/50, Ajuda do Público e Telefone.'),
     writeln(''),
     write('Pressione ENTER para começar...').
 
 mostrar_boas_vindas_tema(cultura_portuguesa) :-
     writeln(''),
+    tocar_som_main_menu,
     writeln('Bem-vindo ao QUEM QUER SER MILIONÁRIO - VERSÃO CULTURA PORTUGUESA! 🇵🇹'),
     writeln(''),
-    writeln('Testa os teus conhecimentos sobre Portugal e sua cultura!'),
-    writeln('Responda 20 perguntas e ganhe até €1.000.000!'),
+    writeln('Teste os seus conhecimentos sobre Portugal e a sua cultura!'),
+    writeln('Responda a 20 perguntas e ganhe até €1.000.000!'),
     writeln('Você tem 3 ajudas: 50/50, Ajuda do Público e Telefone.'),
     writeln(''),
     write('Pressione ENTER para começar...').

@@ -2,6 +2,9 @@
 % INTERFACE - ASCII Art e Formatação Visual
 % ============================================================================
 
+% Importação de modulos
+:- consult('sound_effect.pl').
+
 % Limpeza de tela
 limpar_tela :-
     write('\033[2J'),  % Limpa a tela
@@ -24,9 +27,8 @@ mostrar_logo :-
     writeln('║                                                               ║'),
     writeln('║                                                               ║'),
     writeln('╚═══════════════════════════════════════════════════════════════╝'),
-    writeln('').
-
-
+    writeln(''),
+    tocar_som_main_menu.
 
 % Logo do jogo - Versão Futebol
 mostrar_logo_futebol :-
@@ -45,9 +47,8 @@ mostrar_logo_futebol :-
     writeln('║                                                               ║'),
     writeln('║                    V E R S Ã O   F U T E B O L   ⚽           ║'),
     writeln('╚═══════════════════════════════════════════════════════════════╝'),
-    writeln('').
-
-
+    writeln(''),
+    tocar_som_main_menu.
 
 % Logo do jogo - Versão Cultura Portuguesa
 mostrar_logo_cultura_portuguesa :-
@@ -66,12 +67,8 @@ mostrar_logo_cultura_portuguesa :-
     writeln('║                                                               ║'),
     writeln('║       V E R S Ã O   C U L T U R A   P O R T U G U E S A 🇵🇹    ║'),
     writeln('╚═══════════════════════════════════════════════════════════════╝'),
-    writeln('').
-
-
-
-
-
+    writeln(''),
+    tocar_som_main_menu.
 
 % Cabeçalho do jogo
 mostrar_cabecalho(Nivel, Dinheiro, Ajudas, NivelDificuldade) :-
@@ -119,7 +116,8 @@ mostrar_vitoria(Dinheiro) :-
     writeln('║                    ★ ★ ★ ★ ★                                 ║'),
     writeln('║                                                               ║'),
     writeln('╚═══════════════════════════════════════════════════════════════╝'),
-    writeln('').
+    writeln(''),
+    tocar_som_vitoria.
 
 % Barra percentual visual
 mostrar_barra_percentual(Pct) :-
@@ -226,7 +224,7 @@ mostrar_cabecalho_50_50 :-
     writeln('║                        50/50 ATIVADO                          ║'),
     writeln('╚═══════════════════════════════════════════════════════════════╝'),
     writeln(''),
-    writeln('Eliminando duas respostas incorretas...').
+    writeln('A eliminar duas respostas incorretas...').
 
 % Resultado 50/50
 mostrar_resultado_50_50(L1, T1, L2, T2) :-
@@ -244,7 +242,7 @@ mostrar_cabecalho_publico :-
     writeln('║                   AJUDA DO PÚBLICO                            ║'),
     writeln('╚═══════════════════════════════════════════════════════════════╝'),
     writeln(''),
-    writeln('Consultando o público...').
+    writeln('A consultar o público...').
 
 % Resultado Ajuda do Público
 mostrar_resultado_publico(DistA, DistB, DistC, DistD) :-
@@ -264,7 +262,7 @@ mostrar_cabecalho_telefone :-
     writeln('║                      TELEFONE                                 ║'),
     writeln('╚═══════════════════════════════════════════════════════════════╝'),
     writeln(''),
-    writeln('Ligando para um amigo...').
+    writeln('A ligar para um amigo...').
 
 % Resposta do amigo (confiante)
 mostrar_resposta_amigo_confiante(Resposta, Confianca) :-
@@ -293,7 +291,7 @@ mostrar_boas_vindas :-
     writeln(''),
     writeln('Bem-vindo ao QUEM QUER SER MILIONÁRIO!'),
     writeln(''),
-    writeln('Responda 20 perguntas e ganhe até €1.000.000!'),
+    writeln('Responda a 20 perguntas e ganhe até €1.000.000!'),
     writeln('Você tem 3 ajudas: 50/50, Ajuda do Público e Telefone.'),
     writeln(''),
     write('Pressione ENTER para começar...').
@@ -355,7 +353,7 @@ mostrar_sem_ajudas :-
 % Mensagem de voltar ao jogo
 mostrar_voltar_jogo :-
     writeln(''),
-    writeln('Voltando ao jogo...').
+    writeln('A voltar ao jogo...').
 
 % Mensagem de escolha de ajuda inválida
 mostrar_ajuda_invalida :-
