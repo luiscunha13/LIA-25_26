@@ -2,6 +2,9 @@
 % ASCII_LOGO.PL
 % ============================
 
+
+:- consult('sound_effect.pl').
+
 :- module(ascii_logo, [
     mostrar_logo/0,
     mostrar_logo_animado/0,

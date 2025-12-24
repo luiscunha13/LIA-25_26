@@ -15,6 +15,7 @@
 :- consult('ajudas.pl').
 :- consult('Ranking/ranking.pl').
 :- consult('jogos.pl').
+:- consult('sound_effect.pl').
 
 
 % ============================================================================
@@ -31,21 +32,22 @@ menu_principal :-
     limpar_tela,
     % pinta o fundo uma vez (opcional mas ajuda no "preto total")
     pintar_fundo,
-
+    parar_som,
+    tocar_som_main_menu,
     % estrelas a piscar um bocadinho
     starfield_run(1.5),
-
     mostrar_logo_animado,
     mostrar_menu_principal,
     read_line_to_string(user_input, Opcao),
     tratar_menu_principal(Opcao).
 
-tratar_menu_principal("1") :- !, fluxo_novo_jogo, menu_principal.
-tratar_menu_principal("2") :- !, mostrar_ranking_ui, esperar_enter, menu_principal.
-tratar_menu_principal("3") :- !, mostrar_info_ui, esperar_enter, menu_principal.
+tratar_menu_principal("1") :- !, parar_som, tocar_som_primeiro_menu, fluxo_novo_jogo, menu_principal, parar_som.
+tratar_menu_principal("2") :- !, parar_som, tocar_som_primeiro_menu, mostrar_ranking_ui, esperar_enter, menu_principal, parar_som.
+tratar_menu_principal("3") :- !, parar_som, tocar_som_primeiro_menu, mostrar_info_ui, esperar_enter, menu_principal, parar_som.
 
 tratar_menu_principal("4") :-
     !,
+    parar_som,
     resetar_terminal,
     limpar_tela.
 
@@ -245,6 +247,7 @@ iniciar_jogo_config(Jogador, Modo, Tema, FlagRanking, AjudasIniciais, MaxNivel) 
     format("DEBUG: niveis carregados no jogo = ~w~n", [Unicos]),
     (Unicos = [] ->
         writeln('❌ ERRO: o ficheiro do jogo não carregou nenhuma pergunta!'),
+        parar_som,
         halt(1)
     ; true),
 
