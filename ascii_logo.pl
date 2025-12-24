@@ -1,0 +1,361 @@
+% ============================
+% ASCII_LOGO.PL
+% ============================
+
+:- module(ascii_logo, [
+    mostrar_logo/0,
+    mostrar_logo_animado/0,
+    mostrar_logo_futebol/0,
+    mostrar_logo_cultura_portuguesa/0,
+    mostrar_logo_branco_animado/0      % <-- ADICIONA ISTO
+]).
+
+:- use_module(library(lists)).
+
+:- use_module(library(process)).   % process_create/3
+:- use_module(library(readutil)).  % read_line_to_string/2
+
+% ----------------------------------------------------------------------
+% (A) Largura do terminal (tenta ler "tput cols"; se falhar, usa 80)
+% ----------------------------------------------------------------------
+terminal_cols(Cols) :-
+    catch(
+        (
+            process_create(path(tput), ['cols'], [stdout(pipe(Out))]),
+            read_line_to_string(Out, S),
+            close(Out),
+            number_string(Cols, S),
+            Cols >= 40
+        ),
+        _,
+        fail
+    ),
+    !.
+terminal_cols(80).
+
+% ----------------------------------------------------------------------
+% (B) Utilitários para centrar blocos de texto (listas de strings)
+% ----------------------------------------------------------------------
+max_line_len(Lines, Max) :-
+    maplist(string_length, Lines, Lens),
+    max_list(Lens, Max).
+
+pad_left(Spaces, Line, Out) :-
+    ( Spaces =< 0 ->
+        Out = Line
+    ;   length(Cs, Spaces),
+        maplist(=(' '), Cs),
+        string_chars(Prefix, Cs),
+        string_concat(Prefix, Line, Out)
+    ).
+
+print_centered_lines(Lines) :-
+    terminal_cols(Cols),
+    max_line_len(Lines, W),
+    Left is (Cols - W) // 2,
+    forall(member(L, Lines),
+           (pad_left(Left, L, L2), writeln(L2))).
+
+print_blank_lines(N) :-
+    ( N =< 0 -> true
+    ; nl, N1 is N-1, print_blank_lines(N1)
+    ).
+
+% ----------------------------------------------------------------------
+% (C) ASCII ART principal (estilo "block/big", tipo Rogue Pointers)
+%     NOTA: uso "MILIONARIO" sem acentos para não rebentar alinhamentos.
+% ----------------------------------------------------------------------
+% logo_lines([
+% "██████╗ ██╗   ██╗███████╗███╗   ███╗",
+% "██╔═══██╗██║   ██║██╔════╝████╗ ████║",
+% "██║   ██║██║   ██║█████╗  ██╔████╔██║",
+% "██║▄▄ ██║██║   ██║██╔══╝  ██║╚██╔╝██║",
+% "╚██████╔╝╚██████╔╝███████╗██║ ╚═╝ ██║",
+% " ╚══▀▀═╝  ╚═════╝ ╚══════╝╚═╝     ╚═╝",
+% "",
+% " ██████╗ ██╗   ██╗███████╗██████╗ ",
+% "██╔═══██╗██║   ██║██╔════╝██╔══██╗",
+% "██║   ██║██║   ██║█████╗  ██████╔╝",
+% "██║▄▄ ██║██║   ██║██╔══╝  ██╔══██╗",
+% "╚██████╔╝╚██████╔╝███████╗██║  ██║",
+% " ╚══▀▀═╝  ╚═════╝ ╚══════╝╚═╝  ╚═╝",
+% "",
+% "███████╗███████╗██████╗ ",
+% "██╔════╝██╔════╝██╔══██╗",
+% "███████╗█████╗  ██████╔╝",
+% "╚════██║██╔══╝  ██╔══██╗",
+% "███████║███████╗██║  ██║",
+% "╚══════╝╚══════╝╚═╝  ╚═╝",
+% "",
+% "███╗   ███╗██╗██╗     ██╗ ██████╗ ███╗   ██╗ █████╗ ██████╗ ██╗ ██████╗ ",
+% "████╗ ████║██║██║     ██║██╔═══██╗████╗  ██║██╔══██╗██╔══██╗██║██╔═══██╗",
+% "██╔████╔██║██║██║     ██║██║   ██║██╔██╗ ██║███████║██████╔╝██║██║   ██║",
+% "██║╚██╔╝██║██║██║     ██║██║   ██║██║╚██╗██║██╔══██║██╔══██╗██║██║   ██║",
+% "██║ ╚═╝ ██║██║███████╗██║╚██████╔╝██║ ╚████║██║  ██║██║  ██║██║╚██████╔╝",
+% "╚═╝     ╚═╝╚═╝╚══════╝╚═╝ ╚═════╝ ╚═╝  ╚═══╝╚═╝  ╚═╝╚═╝  ╚═╝╚═╝ ╚═════╝"
+% ]).
+
+logo_top_lines([
+"██████╗ ██╗   ██╗███████╗███╗   ███╗",
+"██╔═══██╗██║   ██║██╔════╝████╗ ████║",
+"██║   ██║██║   ██║█████╗  ██╔████╔██║",
+"██║▄▄ ██║██║   ██║██╔══╝  ██║╚██╔╝██║",
+"╚██████╔╝╚██████╔╝███████╗██║ ╚═╝ ██║",
+" ╚══▀▀═╝  ╚═════╝ ╚══════╝╚═╝     ╚═╝",
+"",
+" ██████╗ ██╗   ██╗███████╗██████╗ ",
+"██╔═══██╗██║   ██║██╔════╝██╔══██╗",
+"██║   ██║██║   ██║█████╗  ██████╔╝",
+"██║▄▄ ██║██║   ██║██╔══╝  ██╔══██╗",
+"╚██████╔╝╚██████╔╝███████╗██║  ██║",
+" ╚══▀▀═╝  ╚═════╝ ╚══════╝╚═╝  ╚═╝",
+"",
+"███████╗███████╗██████╗ ",
+"██╔════╝██╔════╝██╔══██╗",
+"███████╗█████╗  ██████╔╝",
+"╚════██║██╔══╝  ██╔══██╗",
+"███████║███████╗██║  ██║",
+"╚══════╝╚══════╝╚═╝  ╚═╝",
+""
+]).
+
+milionario_lines([
+"███╗   ███╗██╗██╗     ██╗ ██████╗ ███╗   ██╗ █████╗ ██████╗ ██╗ ██████╗ ",
+"████╗ ████║██║██║     ██║██╔═══██╗████╗  ██║██╔══██╗██╔══██╗██║██╔═══██╗",
+"██╔████╔██║██║██║     ██║██║   ██║██╔██╗ ██║███████║██████╔╝██║██║   ██║",
+"██║╚██╔╝██║██║██║     ██║██║   ██║██║╚██╗██║██╔══██║██╔══██╗██║██║   ██║",
+"██║ ╚═╝ ██║██║███████╗██║╚██████╔╝██║ ╚████║██║  ██║██║  ██║██║╚██████╔╝",
+"╚═╝     ╚═╝╚═╝╚══════╝╚═╝ ╚═════╝ ╚═╝  ╚═══╝╚═╝  ╚═╝╚═╝  ╚═╝╚═╝ ╚═════╝"
+]).
+
+
+
+interrogacao_lines([
+" █████╗ ",
+"██╔══██╗",
+"╚█████╔╝",
+" ██╔══╝ ",
+" ██║    ",
+" ╚═╝    "
+]).
+
+append_ascii([], [], _, []).
+append_ascii([L|Ls], [R|Rs], Sep, [Out|Os]) :-
+    string_concat(L, Sep, T1),
+    string_concat(T1, R, Out),
+    append_ascii(Ls, Rs, Sep, Os).
+
+logo_lines(Final) :-
+    logo_top_lines(Top),
+    milionario_lines(M),
+    interrogacao_lines(Q),
+    append_ascii(M, Q, "  ", MComQ),
+    append(Top, MComQ, Final).
+
+
+subtitulo_lines([
+"",
+"★ ★ ★ ★ ★ ★ ★ ★ ★ ★",
+""
+]).
+
+% variantes (podes meter um “badge” pequeno em baixo)
+badge_futebol(["", "VERSAO FUTEBOL  ⚽"]).
+badge_cultura(["", "VERSAO CULTURA PORTUGUESA  🇵🇹"]).
+
+% ----------------------------------------------------------------------
+% (D) Predicados públicos (o que o main/interface usa)
+% ----------------------------------------------------------------------
+mostrar_logo :-
+    print_blank_lines(1),
+    logo_lines(L),
+    print_centered_lines(L),
+    print_blank_lines(1).
+
+
+mostrar_logo_futebol :-
+    mostrar_logo,
+    badge_futebol(B),
+    print_centered_lines(B),
+    print_blank_lines(1).
+
+mostrar_logo_cultura_portuguesa :-
+    mostrar_logo,
+    badge_cultura(B),
+    print_centered_lines(B),
+    print_blank_lines(1).
+
+% ============================================================
+% ANIMAÇÃO (shimmer amarelo) - desenha e SOBE o cursor
+% ============================================================
+
+cursor_hide :- write('\033[?25l').
+cursor_show :- write('\033[?25h').
+
+% ansi_reset :- write('\033[0m').
+
+ansi_reset :- write('\033[39m').  % reset SÓ do foreground (mantém o background)
+
+
+ansi_fg256(N) :- format('\033[38;5;~dm', [N]).
+ansi_yellow_basic :- write('\033[33m').  % fallback
+
+yellow_palette([214, 220, 226, 227, 228, 229, 230]).
+
+color_code_for_pos(I, Phase, Code) :-
+    yellow_palette(P),
+    length(P, L),
+    Period is L * 2 - 2,
+    ( Period =< 0 -> nth0(0, P, Code)
+    ; T0 is (I + Phase) mod Period,
+      ( T0 < L -> T = T0 ; T is Period - T0 ),
+      nth0(T, P, Code)
+    ).
+
+write_colored_line(Line, Phase, Use256) :-
+    string_codes(Line, Cs),
+    forall(nth0(I, Cs, C),
+        ( C =:= 0'  ->
+            put_code(C)
+        ;   color_code_for_pos(I, Phase, Code),
+            ( Use256 = true -> ansi_fg256(Code) ; ansi_yellow_basic ),
+            put_code(C),
+            ansi_reset
+        )
+    ),
+    nl.
+
+print_centered_lines_color(Lines, Phase, Use256) :-
+    terminal_cols(Cols),
+    max_line_len(Lines, W),
+    Left is (Cols - W) // 2,
+    forall(member(L, Lines),
+        ( forall(between(1, Left, _), put_code(0' )),
+          write_colored_line(L, Phase, Use256)
+        )
+    ).
+
+% sobe N linhas (cursor up)
+cursor_up(N) :-
+    N > 0,
+    format('\033[~dA', [N]).
+cursor_up(_).
+
+% Faz Frames frames e sobrepõe-os no mesmo sítio
+animar_logo_frames(Frames, DelaySeconds, Use256) :-
+    cursor_hide,
+    logo_lines(Lines),
+    length(Lines, NL),
+    TopBlank = 1,
+    BotBlank = 1,
+    TotalLines is TopBlank + NL + BotBlank,
+
+    % garante que começamos no topo "normal"
+    write('\033[H'),
+    flush_output,
+
+    forall(between(0, Frames, F),
+        (   % desenha frame
+            print_blank_lines(TopBlank),
+            print_centered_lines_color(Lines, F, Use256),
+            print_blank_lines(BotBlank),
+            flush_output,
+            sleep(DelaySeconds),
+
+            % se não for o último, sobe para desenhar por cima
+            ( F < Frames ->
+                cursor_up(TotalLines),
+                flush_output
+            ; true )
+        )
+    ),
+    cursor_show,
+    ansi_reset.
+
+% Público: faz a animação e DEIXA o último frame (amarelo) no ecrã
+mostrar_logo_animado :-
+    Use256 = true,          % se quiseres fallback: false
+    animar_logo_frames(40, 0.06, Use256).
+
+
+
+% ============================================================
+% ANIMAÇÃO "SHIMMER" BRANCO/CINZA (para ecrãs secundários)
+% ============================================================
+
+white_palette([245, 247, 249, 251, 253, 255, 253, 251, 249, 247]).
+
+color_code_for_pos_palette(I, Phase, Palette, Code) :-
+    length(Palette, L),
+    ( L =< 0 -> Code = 255
+    ; T is (I + Phase) mod L,
+      nth0(T, Palette, Code)
+    ).
+
+ansi_bold_on  :- write('\033[1m').
+ansi_bold_off :- write('\033[22m').
+ansi_white    :- write('\033[37m').
+
+write_colored_line_white(Line, Phase, Use256) :-
+    white_palette(Pal),
+    string_codes(Line, Cs),
+    forall(nth0(I, Cs, C),
+        ( C =:= 0'  ->
+            put_code(C)
+        ;   ( Use256 = true ->
+                color_code_for_pos_palette(I, Phase, Pal, Code),
+                ansi_fg256(Code),
+                put_code(C),
+                ansi_reset
+            ;   % fallback sem 256 cores: alterna bold para dar "brilho"
+                ( 0 is (I + Phase) mod 6 -> ansi_bold_on ; ansi_bold_off ),
+                ansi_white,
+                put_code(C),
+                ansi_bold_off,
+                ansi_reset
+            )
+        )
+    ),
+    nl.
+
+print_centered_lines_white(Lines, Phase, Use256) :-
+    terminal_cols(Cols),
+    max_line_len(Lines, W),
+    Left is (Cols - W) // 2,
+    forall(member(L, Lines),
+        ( forall(between(1, Left, _), put_code(0' )),
+          write_colored_line_white(L, Phase, Use256)
+        )
+    ).
+
+animar_logo_frames_white(Frames, DelaySeconds, Use256) :-
+    cursor_hide,
+    logo_lines(Lines),
+    length(Lines, NL),
+    TopBlank = 1,
+    BotBlank = 1,
+    TotalLines is TopBlank + NL + BotBlank,
+
+    write('\033[H'),
+    flush_output,
+
+    forall(between(0, Frames, F),
+        ( print_blank_lines(TopBlank),
+          print_centered_lines_white(Lines, F, Use256),
+          print_blank_lines(BotBlank),
+          flush_output,
+          sleep(DelaySeconds),
+          ( F < Frames -> cursor_up(TotalLines), flush_output ; true )
+        )
+    ),
+    cursor_show,
+    ansi_bold_off,
+    ansi_white,
+    ansi_reset.
+
+% Público: shimmer branco e deixa o último frame no ecrã
+mostrar_logo_branco_animado :-
+    Use256 = true,
+    animar_logo_frames_white(20, 0.04, Use256).
+
+

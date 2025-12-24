@@ -1,4 +1,4 @@
-pergunta(1, 1, 500, "Que objeto é usado para iniciar um jogo de futebol?", ["Cartão", "Apito", "Cronómetro", "Bola"], 'D').
+pergunta(1, 1, 500, "Que objeto é usado para marcar o início de um jogo de futebol?", ["Cartão", "Apito", "Cronómetro", "Bola"], 'B').
 pergunta(2, 2, 750, "Quantas linhas de campo delimitam um terreno de futebol?", ["2", "3", "4", "5"], 'C').
 pergunta(3, 3, 1000, "Qual destes clubes é conhecido como 'Os Encarnados'?", ["Sporting CP", "FC Porto", "SL Benfica", "Vitória SC"], 'C').
 pergunta(4, 4, 1500, "Qual é a posição mais recuada de uma equipa, exceto o guarda-redes?", ["Ponta de lança", "Lateral", "Defesa central", "Médio ofensivo"], 'C').
