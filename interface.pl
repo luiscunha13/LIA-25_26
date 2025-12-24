@@ -131,9 +131,9 @@ starfield_run(_DurationSecs) :-
 
 starfield_run(DurationSecs) :-
     terminal_cols_rows(Cols, Rows),
-    MarginW = 18,
-    CenterPad = 25,
-    NStars is max(30, Rows * 2),
+    MarginW = 35,
+    CenterPad = 20,
+    NStars is max(60, Rows * 5),
     make_star_positions(NStars, Cols, Rows, MarginW, CenterPad, Positions),
 
     FPS is 14,
@@ -141,7 +141,7 @@ starfield_run(DurationSecs) :-
     Frames is max(1, round(DurationSecs * FPS)),
 
     forall(between(1, Frames, _),
-        ( render_starfield(Positions, Cols, Rows, CenterPad, 35),
+        ( render_starfield(Positions, Cols, Rows, CenterPad, 80),
           sleep(FrameDelay)
         )).
 
@@ -231,6 +231,25 @@ print_centered_block(Lines) :-
              writeln(L2)
            )).
 
+print_centered_block_h(Lines) :-
+    terminal_cols_rows(Cols, _Rows),
+    max_line_len_strs(Lines, W),
+    Left is max(0, (Cols - W) // 2),
+    forall(member(L, Lines),
+           ( pad_left_spaces(Left, L, L2),
+             writeln(L2)
+           )).
+
+
+mostrar_menu_tema_abaixo :-
+    menu_tema_block(Lines),
+    nl, nl,
+    limpar_ate_fim,                 % corrige o fundo
+    shimmer_fg_white,                    % <-- cinza (igual ao look do shimmer)
+    print_centered_block_h(Lines),
+    write('\033[37m'),              % <-- volta ao branco normal do UI
+    nl,
+    write('Escolha uma opção: ').
 
 
 % ============================
@@ -275,6 +294,11 @@ print_chars_shimmer([Ch|Rest], I, K, W) :-
 
 
 
+% limpa do cursor até ao fim e garante fundo preto
+limpar_ate_fim :-
+    ansi_bg_black,          % \033[40m
+    write('\033[J'),        % clear screen from cursor to end
+    flush_output.
 
 
 
@@ -426,7 +450,7 @@ mostrar_menu_modo :-
     % Title tem 12 linhas no teu menu_modo_block
     print_centered_block_shimmer(Lines, 12, 18, 8, 0.05),
     nl,
-    write('Sua escolha: ').
+    write('Escolha uma opção: ').
 
 menu_modo_block(Lines) :-
     Title = [
@@ -458,7 +482,7 @@ mostrar_menu_tema :-
     % Title tem 12 linhas também
     print_centered_block_shimmer(Lines, 12, 18, 8, 0.05),
     nl,
-    write('Sua escolha: ').
+    write('Escolha uma opção: ').
 
 
 menu_tema_block(Lines) :-
@@ -479,8 +503,8 @@ menu_tema_block(Lines) :-
     Box = [
         "╔════════════════════════════════════════════════════════════════╗",
         "║  [1] Cultura Geral                                             ║",
-        "║  [2] Futebol ⚽                                                ║",
-        "║  [3] Cultura Portuguesa 🇵🇹                                    ║",
+        "║  [2] Futebol                                                   ║",
+        "║  [3] Cultura Portuguesa                                        ║",
         "╚════════════════════════════════════════════════════════════════╝"
     ],
     append(Title, [""], T1),
@@ -925,3 +949,12 @@ mostrar_resposta_amigo_incerto(Sugestao) :-
     format('Amigo: Hmm... acho que é a opção ~w, mas não tenho muita certeza...~n', [Sugestao]),
     writeln(''),
     writeln('A ligação foi encerrada.').
+
+
+
+
+
+
+
+
+

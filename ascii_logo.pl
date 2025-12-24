@@ -3,18 +3,20 @@
 % ============================
 
 
-:- consult('sound_effect.pl').
-
 :- module(ascii_logo, [
     mostrar_logo/0,
     mostrar_logo_animado/0,
     mostrar_logo_futebol/0,
     mostrar_logo_cultura_portuguesa/0,
-    mostrar_logo_branco_animado/0      % <-- ADICIONA ISTO
+    mostrar_logo_branco_animado/0,     % <-- ADICIONA ISTO
+     redraw_logo_at_top/1        % <-- ADD
+ 
 ]).
 
-:- use_module(library(lists)).
 
+
+
+:- use_module(library(lists)).
 :- use_module(library(process)).   % process_create/3
 :- use_module(library(readutil)).  % read_line_to_string/2
 
@@ -122,7 +124,7 @@ logo_top_lines([
 ""
 ]).
 
-milionario_lines([
+milionario_lines([ % NAO CONSIGO ADICIONAR O ACENTO 
 "███╗   ███╗██╗██╗     ██╗ ██████╗ ███╗   ██╗ █████╗ ██████╗ ██╗ ██████╗ ",
 "████╗ ████║██║██║     ██║██╔═══██╗████╗  ██║██╔══██╗██╔══██╗██║██╔═══██╗",
 "██╔████╔██║██║██║     ██║██║   ██║██╔██╗ ██║███████║██████╔╝██║██║   ██║",
@@ -130,6 +132,8 @@ milionario_lines([
 "██║ ╚═╝ ██║██║███████╗██║╚██████╔╝██║ ╚████║██║  ██║██║  ██║██║╚██████╔╝",
 "╚═╝     ╚═╝╚═╝╚══════╝╚═╝ ╚═════╝ ╚═╝  ╚═══╝╚═╝  ╚═╝╚═╝  ╚═╝╚═╝ ╚═════╝"
 ]).
+
+
 
 
 
@@ -278,7 +282,7 @@ animar_logo_frames(Frames, DelaySeconds, Use256) :-
 % Público: faz a animação e DEIXA o último frame (amarelo) no ecrã
 mostrar_logo_animado :-
     Use256 = true,          % se quiseres fallback: false
-    animar_logo_frames(40, 0.06, Use256).
+    animar_logo_frames(22, 0.06, Use256).
 
 
 
@@ -360,5 +364,31 @@ animar_logo_frames_white(Frames, DelaySeconds, Use256) :-
 mostrar_logo_branco_animado :-
     Use256 = true,
     animar_logo_frames_white(20, 0.04, Use256).
+
+
+% ============================================================
+% REDESENHAR LOGO NO TOPO SEM ESTRAGAR O CURSOR (para menu)
+% ============================================================
+
+% guarda/restaura cursor (ANSI)
+cursor_save    :- write('\033[s').
+cursor_restore :- write('\033[u').
+
+% redesenha o logo no topo (row 1 col 1) e volta ao sítio onde o user está a escrever
+redraw_logo_at_top(Phase) :-
+    Use256 = true,
+    logo_lines(Lines),
+    cursor_save,
+    write('\033[H'),          % vai para o topo do terminal
+    flush_output,
+
+    % desenha o logo no topo (mesmo layout do mostrar_logo_animado)
+    print_blank_lines(1),
+    print_centered_lines_color(Lines, Phase, Use256),
+    print_blank_lines(1),
+
+    flush_output,
+    cursor_restore,
+    flush_output.
 
 

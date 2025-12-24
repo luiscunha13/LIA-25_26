@@ -1,6 +1,8 @@
 % ============================
 % MAIN.PL
 % ============================
+
+
 :- dynamic pergunta/6.
 :- multifile pergunta/6.
 :- discontiguous pergunta/6.
@@ -9,13 +11,16 @@
 :- use_module(library(random)).
 :- use_module(library(lists)).
 :- use_module(library(date)).
-:- consult('ascii_logo.pl').
+
+
+:- use_module(ascii_logo).
+:- consult('sound_effect.pl').
 
 :- consult('interface.pl').
 :- consult('ajudas.pl').
 :- consult('Ranking/ranking.pl').
 :- consult('jogos.pl').
-:- consult('sound_effect.pl').
+
 
 
 % ============================================================================
@@ -31,15 +36,49 @@ menu_principal :-
     setar_modo_jogo,
     limpar_tela,
     % pinta o fundo uma vez (opcional mas ajuda no "preto total")
-    pintar_fundo,
+   % pintar_fundo,
     parar_som,
     tocar_som_main_menu,
     % estrelas a piscar um bocadinho
-    starfield_run(1.5),
+  %  starfield_run(1.5),
     mostrar_logo_animado,
     mostrar_menu_principal,
-    read_line_to_string(user_input, Opcao),
+
+
+  
+
+    ler_opcao_menu_principal(Opcao), 
     tratar_menu_principal(Opcao).
+
+
+% Lê a opção enquanto vai redesenhando o logo (até 15 "ciclos" de animação)
+ler_opcao_menu_principal( Opcao) :-
+    FramesPorCiclo = 20,
+    Ciclos = 20,
+    TotalFrames is FramesPorCiclo * Ciclos,
+    Delay = 0.06,
+    ler_com_logo_animado( TotalFrames, Delay, Opcao).
+
+
+
+
+ler_com_logo_animado(0, _Delay, Opcao) :-
+    % acabou o tempo da animação -> lê normalmente
+    read_line_to_string(user_input, Opcao).
+
+ler_com_logo_animado(N, Delay, Opcao) :-
+    % vê se já há input disponível (non-blocking)
+    wait_for_input([user_input], Ready, 0),
+    ( Ready \= [] ->
+        read_line_to_string(user_input, Opcao)
+    ;
+        Phase is N,
+        ascii_logo:redraw_logo_at_top(Phase),
+        sleep(Delay),
+        N1 is N - 1,
+        ler_com_logo_animado(N1, Delay, Opcao)
+    ).
+
 
 tratar_menu_principal("1") :- !, parar_som, tocar_som_primeiro_menu, fluxo_novo_jogo, menu_principal, parar_som.
 tratar_menu_principal("2") :- !, parar_som, tocar_som_primeiro_menu, mostrar_ranking_ui, esperar_enter, menu_principal, parar_som.
@@ -94,8 +133,7 @@ mostrar_info_ui :-
 
 fluxo_novo_jogo :-
     pedir_nome(Jogador),
-    escolher_modo(Modo),
-    escolher_tema(Tema),
+    escolher_modo_e_tema(Modo, Tema),
     config_modo(Modo, FlagRanking, AjudasIniciais, MaxNivel),
     iniciar_jogo_config(Jogador, Modo, Tema, FlagRanking, AjudasIniciais, MaxNivel).
 
@@ -142,6 +180,44 @@ tratar_escolha_tema(_, Tema) :-
     writeln('❌ Escolha inválida! Selecione 1, 2 ou 3.'),
     sleep(1),
     escolher_tema(Tema).
+
+
+
+
+escolher_modo_e_tema(Modo, Tema) :-
+    limpar_tela,
+    mostrar_menu_modo,
+    read_line_to_string(user_input, X),
+    (   tratar_escolha_modo(X, Modo)
+    ->  true
+    ;   writeln('❌ Escolha inválida!'),
+        sleep(1),
+        escolher_modo_e_tema(Modo, Tema)
+    ),
+    % aqui já NÃO limpas o ecrã — imprimes o tema por baixo
+  %  format('~nModo escolhido: ~w~n', [Modo]),
+    mostrar_menu_tema_abaixo,
+    read_line_to_string(user_input, EscolhaTema),
+    (   tratar_escolha_tema(EscolhaTema, Tema)
+    ->  true
+    ;   writeln('❌ Escolha inválida! Selecione 1, 2 ou 3.'),
+        sleep(1),
+        % volta só a pedir o tema (mantendo a info do modo)
+        escolher_tema_abaixo(Tema)
+    ).
+
+escolher_tema_abaixo(Tema) :-
+    mostrar_menu_tema_abaixo,
+    read_line_to_string(user_input, EscolhaTema),
+    (   tratar_escolha_tema(EscolhaTema, Tema)
+    ->  true
+    ;   writeln('❌ Escolha inválida! Selecione 1, 2 ou 3.'),
+        sleep(1),
+        escolher_tema_abaixo(Tema)
+    ).
+
+
+
 
 % Parâmetros do modo
 % FlagRanking = grava | nao_grava
@@ -261,31 +337,35 @@ iniciar_jogo_config(Jogador, Modo, Tema, FlagRanking, AjudasIniciais, MaxNivel) 
 
 
 mostrar_boas_vindas_tema(geral, Modo) :-
+    upcase_atom(Modo, ModoMaius),
     nl,
-    writeln('Bem-vindo ao QUEM QUER SER MILIONÁRIO!'),
-    format('Modo: ~w~n', [Modo]),
+    writeln('BEM-VINDO AO QUEM QUER SER MILIONÁRIO!'),
+    format('MODO: ~w~n', [ModoMaius]),
     nl,
-    writeln('Responda às perguntas e ganhe até €1.000.000!'),
+    writeln('RESPONDA ÀS PERGUNTAS E GANHE ATÉ €1.000.000!'),
     writeln(''),
-    write('Pressione ENTER para começar...').
+    write('PRESSIONE ENTER PARA COMEÇAR...').
+
 
 mostrar_boas_vindas_tema(futebol, Modo) :-
+   upcase_atom(Modo, ModoMaius), 
     nl,
-    writeln('Bem-vindo ao QUEM QUER SER MILIONÁRIO - VERSÃO FUTEBOL! ⚽'),
-    format('Modo: ~w~n', [Modo]),
+    writeln('BEM-VINDO AO QUEM QUER SER MILIONÁRIO - VERSÃO FUTEBOL! ⚽'),
+    format('MODO: ~w~n', [ModoMaius]),
     nl,
     writeln('Testa os teus conhecimentos sobre o mundo do futebol!'),
     writeln(''),
-    write('Pressione ENTER para começar...').
+    write('PRESSIONE ENTER PARA COMEÇAR...').
 
 mostrar_boas_vindas_tema(cultura_portuguesa, Modo) :-
+upcase_atom(Modo, ModoMaius), 
     nl,
-    writeln('Bem-vindo ao QUEM QUER SER MILIONÁRIO - VERSÃO CULTURA PORTUGUESA! 🇵🇹'),
-    format('Modo: ~w~n', [Modo]),
+    writeln('BEM-VINDO AO QUEM QUER SER MILIONÁRIO - VERSÃO CULTURA PORTUGUESA! 🇵🇹'),
+    format('MODO: ~w~n', [ModoMaius]),
     nl,
     writeln('Testa os teus conhecimentos sobre Portugal e a sua cultura!'),
     writeln(''),
-    write('Pressione ENTER para começar...').
+    write('PRESSIONE ENTER PARA COMEÇAR...').
 
 % ============================================================================
 % REGRAS DO JOGO
@@ -359,7 +439,7 @@ loop_jogo(Nivel, DinheiroAtual, Ajudas, MaxNivel, DinheiroFinal, Outcome) :-
     Nivel =< MaxNivel,
     limpar_tela,
     pintar_fundo, 
-    starfield_run(0.6),
+   % starfield_run(0.6),
     nivel_dificuldade(Nivel, NivelDificuldade),
 
     selecionar_pergunta(Nivel, ID, ValorPergunta, Texto, Opcoes, RespostaCorreta),

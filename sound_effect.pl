@@ -1,29 +1,62 @@
-% ============================================================================
-% PREDICADOS DE SOM
-% ============================================================================
+:- module(sound_effect, [
+    tocar_som_vitoria/0,
+    tocar_som_primeiro_menu/0,
+    tocar_som_main_menu/0,
+    parar_som/0
+]).
 
-% Som de vitória (toca uma vez, sem loop)
+:- use_module(library(process)).
+
+
+
+:- use_module(library(unix)).
+
+:- initialization(setup_signals).
+
+setup_signals :-
+    on_signal(int,  _, handle_exit),  % Ctrl+C
+    on_signal(term, _, handle_exit),  % kill
+    on_signal(hup,  _, handle_exit).
+
+handle_exit(_Signal) :-
+    parar_som,
+    halt(0).
+
+
+:- dynamic som_pid/1.
+
+
+
+
+
+
+
+
+% --- helper: arranca um loop e guarda o PID
+start_loop(Comando) :-
+    process_create(path(sh), ['-c', Comando], [process(PID), detached(true)]),
+    assertz(som_pid(PID)).
+
+% --- helper: mata todos os PIDs que nós próprios criámos
+stop_all_loops :-
+    forall(retract(som_pid(PID)),
+           catch(process_kill(PID, term), _, true)).
+
 tocar_som_vitoria :-
-    shell('afplay SoundEffects/vitoria.mp3').
+    % toca uma vez (não guardar PID)
+    process_create(path(sh),
+        ['-c', 'ffplay -nodisp -autoexit -loglevel quiet SoundEffects/vitoria.mp3 >/dev/null 2>&1'],
+        [detached(true)]).
 
-% Som do primeiro menu (em loop contínuo)
 tocar_som_primeiro_menu :-
-    shell('(while true; do afplay SoundEffects/primeiro_menu.mp3; done) &').
+    stop_all_loops,
+    start_loop('while true; do ffplay -nodisp -autoexit -loglevel quiet SoundEffects/primeiro_menu.mp3 >/dev/null 2>&1; done').
 
-% Som do menu principal (em loop contínuo)
 tocar_som_main_menu :-
-    shell('(while true; do afplay SoundEffects/main_menu.mp3; done) &').
+    stop_all_loops,
+    start_loop('while true; do ffplay -nodisp -autoexit -loglevel quiet SoundEffects/main_menu.mp3 >/dev/null 2>&1; done').
 
-% Para todos os sons a tocar (mata processos afplay E subshells)
-% Sempre tem sucesso, mesmo que não haja processos a matar
 parar_som :-
-    ignore(shell('pkill -9 afplay 2>/dev/null')),
-    ignore(shell('pkill -9 -f "while true.*afplay" 2>/dev/null')).
+    stop_all_loops.
 
-% ============================================================================
-% CLEANUP AUTOMÁTICO AO SAIR
-% ============================================================================
-
-% Garante que os sons param quando o programa Prolog termina
 :- at_halt(parar_som).
-

@@ -4,6 +4,7 @@
 
 :- use_module(library(date)).
 :- use_module(library(lists)).
+:- use_module(interface).   % para print_centered_block/1
 
 ranking_file('Ranking/ranking.csv').
 
@@ -20,17 +21,38 @@ guardar_resultado(Jogador, Modo, Tema, Pontuacao, Outcome) :-
     close(S).
 
 % UI: mostrar ranking
+%mostrar_ranking :-
+%    ler_resultados(Rs),
+%    (   Rs = []
+%    ->  writeln('Ainda não há jogos registados no ranking.')
+%    ;   writeln('═══════════════════════════════════════════════════════════════'),
+%        writeln('RANKING MUNDIAL (TOP 3)'),
+%        writeln('═══════════════════════════════════════════════════════════════'),
+%        nl,
+%        sort(5, @>=, Rs, Ordenado), % ordena por pontuação desc
+%        mostrar_top(Ordenado, 3, 1)
+%    ).
+
+
+
 mostrar_ranking :-
     ler_resultados(Rs),
     (   Rs = []
-    ->  writeln('Ainda não há jogos registados no ranking.')
-    ;   writeln('═══════════════════════════════════════════════════════════════'),
-        writeln('RANKING MUNDIAL (TOP 3)'),
-        writeln('═══════════════════════════════════════════════════════════════'),
+    ->  ranking_vazio_ui
+    ;   ranking_title_block(Lines),
+        print_centered_block(Lines),
         nl,
         sort(5, @>=, Rs, Ordenado), % ordena por pontuação desc
-        mostrar_top(Ordenado, 3, 1)
+        mostrar_top(Ordenado, 5, 1)
     ).
+
+ranking_vazio_ui :-
+    ranking_title_block(Lines),
+    print_centered_block(Lines),
+    nl,
+    writeln('Ainda não há jogos registados no ranking.').
+
+
 
 % Ler resultados do CSV
 ler_resultados(Resultados) :-
@@ -67,6 +89,28 @@ parse_linha_ranking(Linha, registo(TS, Jogador, Modo, Tema, Pontuacao, Outcome))
 mostrar_top(_, Max, I) :- I > Max, !.
 mostrar_top([], _, _) :- !.
 mostrar_top([registo(_TS, Jog, Modo, Tema, P, Outcome)|Rs], Max, I) :-
-    format("~d) ~w  —  €~d  (~w / ~w / ~w)~n", [I, Jog, P, Modo, Tema, Outcome]),
+    trofeu_sufixo(I, Sufixo),
+    format(string(Line),
+           "~d) ~w  —  €~d  (~w / ~w / ~w)~w",
+           [I, Jog, P, Modo, Tema, Outcome, Sufixo]),
+    print_centered_block_h([Line]),
     I2 is I + 1,
     mostrar_top(Rs, Max, I2).
+
+trofeu_sufixo(1, " 🏆").  % ouro
+trofeu_sufixo(2, " 🥈").  % prata
+trofeu_sufixo(3, " 🥉").  % bronze
+trofeu_sufixo(_, "").
+
+
+
+ranking_title_block(Lines) :-
+    Lines = [
+        "██████╗  █████╗ ███╗   ██╗██╗  ██╗██╗███╗   ██╗ ██████╗ ",
+        "██╔══██╗██╔══██╗████╗  ██║██║ ██╔╝██║████╗  ██║██╔════╝ ",
+        "██████╔╝███████║██╔██╗ ██║█████╔╝ ██║██╔██╗ ██║██║  ███╗",
+        "██╔══██╗██╔══██║██║╚██╗██║██╔═██╗ ██║██║╚██╗██║██║   ██║",
+        "██║  ██║██║  ██║██║ ╚████║██║  ██╗██║██║ ╚████║╚██████╔╝",
+        "╚═╝  ╚═╝╚═╝  ╚═╝╚═╝  ╚═══╝╚═╝  ╚═╝╚═╝╚═╝  ╚═══╝ ╚═════╝ "
+    ].
+
