@@ -322,15 +322,36 @@ limpar_ate_fim :-
 % BLUE WAVE SHIMMER (suave)
 % ============================
 
-blue_palette([17, 18, 19, 20, 21, 24, 25, 26]).
+% palete MUITO mais escura (navy -> azul escuro)
+blue_palette_dark([17,17,18,18,19,19,20,19,19,18,18,17]).
 
+% onda TRIANGULAR (smooth) como no amarelo
+color_code_for_pos_blue(I, Phase, Code) :-
+    blue_palette_dark(P),
+    length(P, L),
+    Period is L * 2 - 2,
+    ( Period =< 0 ->
+        nth0(0, P, Code)
+    ;   T0 is (I + Phase) mod Period,
+        ( T0 < L -> T = T0 ; T is Period - T0 ),
+        nth0(T, P, Code)
+    ).
+
+    
 print_line_bluewave(Line, Phase) :-
-    blue_palette(Pal),
-    length(Pal, LPal),
-    string_chars(Line, Chars),
-    print_chars_bluewave(Chars, 1, Phase, Pal, LPal),
-    nl,
-    ansi_fg_reset_only.
+    string_codes(Line, Cs),
+    forall(nth0(I, Cs, C),
+        ( C =:= 0'  ->
+            put_code(C)
+        ;   color_code_for_pos_blue(I, Phase, Code),
+            ansi_fg_256(Code),
+            put_code(C),
+            ansi_fg_reset_only
+        )
+    ),
+    nl.
+
+
 
 print_chars_bluewave([], _I, _Phase, _Pal, _LPal).
 print_chars_bluewave([Ch|Rest], I, Phase, Pal, LPal) :-
@@ -1161,38 +1182,31 @@ cursor_restore :- write('\033[u').
 
 % desenha o título do MENU PRINCIPAL (bluewave) no sítio certo, sem mexer no resto
 redraw_menu_principal_title_at_top(Phase) :-
-    % descobrimos onde acaba o logo de cima
     ascii_logo:logo_lines(LogoLines),
     length(LogoLines, NL),
-
-    % layout do redraw_logo_at_top:
-    % row1: home
-    % +1 blank line
-    % + NL linhas do logo
-    % +1 blank line
-    % no teu draw_menu_principal_full ainda fazes um nl extra antes do título
-    TitleRowStart is NL + 4,
+    TitleRowStart is NL + 4,     % ajusta só se precisares
 
     menu_principal_title(Title),
     length(Title, H),
 
     cursor_save,
-    cursor_pos(TitleRowStart, 1),
 
-    % limpa a zona do título (H linhas) para não deixar lixo
-    forall(between(1, H, I),
-        ( write('\033[2K'),              % clear line
-          ( I < H -> write('\n') ; true )
+    % limpa cada linha SEM mexer na posição com '\n'
+    H1 is H - 1,
+    forall(between(0, H1, J),
+        ( Row is TitleRowStart + J,
+          cursor_pos(Row, 1),
+          write('\033[2K')          % clear full line
         )),
 
-    % volta ao início da zona e desenha o título com a fase atual
+    % desenha por cima
     cursor_pos(TitleRowStart, 1),
     draw_menu_principal_title_bluewave(Title, Phase),
 
     cursor_restore,
     flush_output.
+    
 
-% desenha o bloco do título centrado, com a fase dada
 draw_menu_principal_title_bluewave(Lines, Phase) :-
     terminal_cols_rows(Cols, _Rows),
     max_line_len_strs(Lines, Wmax),
@@ -1201,8 +1215,6 @@ draw_menu_principal_title_bluewave(Lines, Phase) :-
         ( pad_left_spaces(Left, L, L2),
           print_line_bluewave(L2, Phase)
         )).
-
-
 
 
 
