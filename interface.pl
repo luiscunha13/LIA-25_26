@@ -263,6 +263,15 @@ mostrar_menu_tema_abaixo :-
 shimmer_fg_white   :- write('\033[37m').
 shimmer_reset      :- write('\033[0m').
 
+
+% 256-color foreground
+ansi_fg_256(N) :- format('\033[38;5;~dm', [N]).
+
+cursor_up(N) :-
+    N > 0, format('\033[~dA', [N]).
+cursor_up(_).
+
+
 % imprime uma linha com shimmer: a zona [K..K+W] fica em bright
 print_line_shimmer(Line, K, W) :-
     string_chars(Line, Chars),
@@ -308,6 +317,57 @@ limpar_ate_fim :-
 
 
 
+
+% ============================
+% BLUE WAVE SHIMMER (suave)
+% ============================
+
+blue_palette([17, 18, 19, 20, 21, 24, 25, 26]).
+
+print_line_bluewave(Line, Phase) :-
+    blue_palette(Pal),
+    length(Pal, LPal),
+    string_chars(Line, Chars),
+    print_chars_bluewave(Chars, 1, Phase, Pal, LPal),
+    nl,
+    ansi_fg_reset_only.
+
+print_chars_bluewave([], _I, _Phase, _Pal, _LPal).
+print_chars_bluewave([Ch|Rest], I, Phase, Pal, LPal) :-
+    ( Ch = ' ' ->
+        % espaço: não “pisca”
+        ansi_fg_reset_only,
+        write(Ch),
+        I1 is I + 1
+    ;   % onda suave: depende da coluna + fase
+        Idx is (I + Phase) mod LPal,
+        nth0(Idx, Pal, Color),
+        ansi_fg_256(Color),
+        write(Ch),
+        ansi_fg_reset_only,
+        I1 is I + 1
+    ),
+    print_chars_bluewave(Rest, I1, Phase, Pal, LPal).
+
+animate_block_h_bluewave(Lines, Frames, Delay) :-
+    terminal_cols_rows(Cols, _Rows),
+    max_line_len_strs(Lines, Wmax),
+    Left is max(0, (Cols - Wmax) // 2),
+    length(Lines, H),
+    Last is Frames - 1,
+
+    forall(between(0, Last, F),
+      (
+        forall(member(L, Lines),
+          ( pad_left_spaces(Left, L, L2),
+            print_line_bluewave(L2, F)
+          )),
+        flush_output,
+        sleep(Delay),
+        ( F < Last -> cursor_up(H), flush_output ; true )
+      )),
+
+    ansi_fg_reset_only.
 
 
 
@@ -500,10 +560,60 @@ read_key_timeout(Timeout, Key) :-
 % SHIMMER AZUL (para títulos)
 % ============================
 
-cursor_up(N) :-
-    N > 0,
-    format('\033[~dA', [N]).
-cursor_up(_).
+% helper: sobe N linhas
+% helper: sobe N linhas
+
+
+% ============================
+% SHIMMER / BEAM (robusto - usa inverse video)
+% ============================
+
+
+
+% imprime uma linha com "beam": a zona [K..K+W] fica em inverse video
+print_line_beam(Line, K, W) :-
+    string_chars(Line, Chars),
+    print_chars_beam(Chars, 1, K, W),
+    nl.
+
+print_chars_beam([], _I, _K, _W).
+print_chars_beam([Ch|Rest], I, K, W) :-
+    ( I >= K, I =< K+W ->
+        write('\033[7m')      % inverse ON
+    ;   write('\033[27m')     % inverse OFF
+    ),
+    write(Ch),
+    I1 is I + 1,
+    print_chars_beam(Rest, I1, K, W).
+
+% anima um bloco centrado horizontalmente
+animate_block_h_beam(Lines, Frames, BeamW, Delay) :-
+    terminal_cols_rows(Cols, _Rows),
+    max_line_len_strs(Lines, Wmax),
+    Left is max(0, (Cols - Wmax) // 2),
+    TotalW is Left + Wmax,
+    length(Lines, H),
+
+    forall(between(1, Frames, F),
+      (
+        K is 1 + ((F-1) mod max(1, TotalW)),
+        forall(member(L, Lines),
+           ( pad_left_spaces(Left, L, L2),
+             print_line_beam(L2, K, BeamW)
+           )),
+        write('\033[27m'),   % garante inverse OFF no fim do frame
+        flush_output,
+        sleep(Delay),
+        ( F < Frames -> cursor_up(H), flush_output ; true )
+      )).
+
+
+
+% ============================
+% SHIMMER AZUL (para títulos)
+% ============================
+
+
 
 % imprime uma linha com shimmer azul: zona [K..K+W] fica bright (branco),
 % o resto fica azul escuro
@@ -530,6 +640,21 @@ animate_block_h_shimmer_blue(Lines, Frames, BeamW, Delay) :-
     Left is max(0, (Cols - Wmax) // 2),
     TotalW is Left + Wmax,
     length(Lines, H),
+
+    forall(between(1, Frames, F),
+      (
+        K is 1 + ((F-1) mod max(1, TotalW)),
+        forall(member(L, Lines),
+           ( pad_left_spaces(Left, L, L2),
+             print_line_shimmer_blue(L2, K, BeamW)
+           )),
+        flush_output,
+        sleep(Delay),
+        ( F < Frames -> cursor_up(H), flush_output ; true )
+      )),
+
+    ansi_fg_reset_only.
+
 
 
 
@@ -864,34 +989,25 @@ menu_modo_setas_idx(ModoSelIdx, Modo) :-
 
 menu_loop_principal_anim(Options, Idx0, Phase0, IdxFinal) :-
     read_key_timeout(0.05, K),   % 50ms: responsivo e dá tempo para animar
-    (   K = none
-    ->  Phase1 is Phase0 + 1,
-        ascii_logo:redraw_logo_at_top(Phase1),
-        menu_loop_principal_anim(Options, Idx0, Phase1, IdxFinal)
-
+   (   K = none
+->  Phase1 is Phase0 + 1,
+    ascii_logo:redraw_logo_at_top(Phase1),
+    redraw_menu_principal_title_at_top(Phase1),
+    menu_loop_principal_anim(Options, Idx0, Phase1, IdxFinal)
     ;   K = up
     ->  length(Options, N),
-      
         ( Idx0 =:= 1 -> Idx1 = N ; Idx1 is Idx0 - 1 ),
-
         draw_menu_only(Options, Idx1),
         menu_loop_principal_anim(Options, Idx1, Phase0, IdxFinal)
-
     ;   K = down
     ->  length(Options, N),
-    
-
         ( Idx0 =:= N -> Idx1 = 1 ; Idx1 is Idx0 + 1 ),
-
         draw_menu_only(Options, Idx1),
         menu_loop_principal_anim(Options, Idx1, Phase0, IdxFinal)
-
     ;   K = enter
     ->  IdxFinal = Idx0
-
     ;   (K = char(113) ; K = esc)
     ->  IdxFinal = 4
-
     ;   menu_loop_principal_anim(Options, Idx0, Phase0, IdxFinal)
     ).
 
@@ -962,14 +1078,69 @@ draw_menu_lines([Opt|Rest], Sel, I) :-
 
 
 
+
+
+% ============================
+% BLINK ASCII (alternar letras)
+% ============================
+
+
+% imprime uma linha onde letras alternam bright/azul com base no Phase
+print_line_altblink(Line, Phase) :-
+    string_chars(Line, Chars),
+    print_chars_altblink(Chars, 1, Phase),
+    nl,
+    ansi_fg_reset_only.
+
+print_chars_altblink([], _I, _Phase).
+print_chars_altblink([Ch|Rest], I, Phase) :-
+    ( Ch = ' ' ->
+        ansi_fg_blue_dark,
+        write(Ch),
+        ansi_fg_reset_only,
+        I1 is I + 1
+    ;   T is (I + Phase) mod 2,
+        ( T =:= 0 -> ansi_fg_bright ; ansi_fg_blue_dark ),
+        write(Ch),
+        ansi_fg_reset_only,
+        I1 is I + 1
+    ),
+    print_chars_altblink(Rest, I1, Phase).
+
+
+% anima um bloco centrado horizontalmente (sem mexer no resto do ecrã)
+% anima um bloco centrado horizontalmente (sem mexer no resto do ecrã)
+animate_block_h_altblink(Lines, Frames, Delay) :-
+    terminal_cols_rows(Cols, _Rows),
+    max_line_len_strs(Lines, Wmax),
+    Left is max(0, (Cols - Wmax) // 2),
+    length(Lines, H),
+    Last is Frames - 1,
+
+    forall(between(0, Last, F),
+      (
+        forall(member(L, Lines),
+          ( pad_left_spaces(Left, L, L2),
+            print_line_altblink(L2, F)
+          )),
+        flush_output,
+        sleep(Delay),
+        ( F < Last -> cursor_up(H), flush_output ; true )
+      )).
+
+
+
+
 draw_menu_principal_full(Options, SelIdx) :-
     limpar_tela,
     ascii_logo:mostrar_logo,   % desenha estático 1 vez
     nl,
-    menu_principal_title(Title),
-    ansi_fg_blue_dark,
-    print_centered_block_h(Title),
-    ansi_fg_reset_only,
+menu_principal_title(Title),
+draw_menu_principal_title_bluewave(Title, 0),
+nl,
+
+
+
     nl,
     ansi_fg_blue_dark,
     print_centered_block_h(["╔════════════════════════════════════════════════════════════════╗"]),
@@ -984,6 +1155,52 @@ draw_menu_principal_full(Options, SelIdx) :-
 
 
 
+% --- guardar/restaurar cursor (para não estragar o sítio onde estás no menu)
+cursor_save    :- write('\033[s').
+cursor_restore :- write('\033[u').
+
+% desenha o título do MENU PRINCIPAL (bluewave) no sítio certo, sem mexer no resto
+redraw_menu_principal_title_at_top(Phase) :-
+    % descobrimos onde acaba o logo de cima
+    ascii_logo:logo_lines(LogoLines),
+    length(LogoLines, NL),
+
+    % layout do redraw_logo_at_top:
+    % row1: home
+    % +1 blank line
+    % + NL linhas do logo
+    % +1 blank line
+    % no teu draw_menu_principal_full ainda fazes um nl extra antes do título
+    TitleRowStart is NL + 4,
+
+    menu_principal_title(Title),
+    length(Title, H),
+
+    cursor_save,
+    cursor_pos(TitleRowStart, 1),
+
+    % limpa a zona do título (H linhas) para não deixar lixo
+    forall(between(1, H, I),
+        ( write('\033[2K'),              % clear line
+          ( I < H -> write('\n') ; true )
+        )),
+
+    % volta ao início da zona e desenha o título com a fase atual
+    cursor_pos(TitleRowStart, 1),
+    draw_menu_principal_title_bluewave(Title, Phase),
+
+    cursor_restore,
+    flush_output.
+
+% desenha o bloco do título centrado, com a fase dada
+draw_menu_principal_title_bluewave(Lines, Phase) :-
+    terminal_cols_rows(Cols, _Rows),
+    max_line_len_strs(Lines, Wmax),
+    Left is max(0, (Cols - Wmax) // 2),
+    forall(member(L, Lines),
+        ( pad_left_spaces(Left, L, L2),
+          print_line_bluewave(L2, Phase)
+        )).
 
 
 
