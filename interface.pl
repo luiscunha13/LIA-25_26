@@ -433,14 +433,6 @@ mostrar_menu_principal :-
 
 
 
-
-
-
-
-% ============================
-% INPUT: teclas (setas/enter)
-% ============================
-
 % ============================
 % INPUT: teclas (setas/enter) - RAW + leitura de sequências ANSI
 % ============================
@@ -501,6 +493,44 @@ read_key_timeout(Timeout, Key) :-
         Key = none
     ;   read_key(Key)
     ).
+
+
+
+% ============================
+% SHIMMER AZUL (para títulos)
+% ============================
+
+cursor_up(N) :-
+    N > 0,
+    format('\033[~dA', [N]).
+cursor_up(_).
+
+% imprime uma linha com shimmer azul: zona [K..K+W] fica bright (branco),
+% o resto fica azul escuro
+print_chars_shimmer_blue([], _I, _K, _W).
+print_chars_shimmer_blue([Ch|Rest], I, K, W) :-
+    ( I >= K, I =< K+W ->
+        ansi_fg_bright          % brilho (branco)
+    ;   ansi_fg_blue_dark       % base (azul)
+    ),
+    write(Ch),
+    ansi_fg_reset_only,
+    I1 is I + 1,
+    print_chars_shimmer_blue(Rest, I1, K, W).
+
+print_line_shimmer_blue(Line, K, W) :-
+    string_chars(Line, Chars),
+    print_chars_shimmer_blue(Chars, 1, K, W),
+    nl.
+
+% anima um bloco centrado horizontalmente (SEM centrar verticalmente)
+animate_block_h_shimmer_blue(Lines, Frames, BeamW, Delay) :-
+    terminal_cols_rows(Cols, _Rows),
+    max_line_len_strs(Lines, Wmax),
+    Left is max(0, (Cols - Wmax) // 2),
+    TotalW is Left + Wmax,
+    length(Lines, H),
+
 
 
 % ============================
