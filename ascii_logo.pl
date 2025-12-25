@@ -9,7 +9,8 @@
     mostrar_logo_futebol/0,
     mostrar_logo_cultura_portuguesa/0,
     mostrar_logo_branco_animado/0,     % <-- ADICIONA ISTO
-     redraw_logo_at_top/1        % <-- ADD
+     redraw_logo_at_top/1   ,     % <-- ADD
+        mostrar_logo_intro_partes/0    % <-- ADICIONA ISTO
  
 ]).
 
@@ -392,3 +393,91 @@ redraw_logo_at_top(Phase) :-
     flush_output.
 
 
+
+% ============================================================
+% INTRO POR PARTES (QUEM -> QUER -> SER -> MILIONARIO?)
+% ============================================================
+
+% faz uma string só com espaços, com o mesmo comprimento da linha original
+spaces_like(Line, Out) :-
+    string_length(Line, Len),
+    length(Cs, Len),
+    maplist(=(' '), Cs),
+    string_chars(Out, Cs).
+
+mask_lines_by_index(Lines, KeepIdxs, Masked) :-
+    findall(Out,
+        (
+            nth0(I, Lines, L),
+            (   member(I, KeepIdxs)
+            ->  Out = L
+            ;   spaces_like(L, Out)
+            )
+        ),
+        Masked).
+
+% anima um conjunto de linhas (igual ao animar_logo_frames, mas genérico)
+animar_lines_frames(Lines, Frames, DelaySeconds, Use256) :-
+    cursor_hide,
+    length(Lines, NL),
+    TopBlank = 1,
+    BotBlank = 1,
+    TotalLines is TopBlank + NL + BotBlank,
+
+    write('\033[H'),
+    flush_output,
+
+    forall(between(0, Frames, F),
+        (   print_blank_lines(TopBlank),
+            print_centered_lines_color(Lines, F, Use256),
+            print_blank_lines(BotBlank),
+            flush_output,
+            sleep(DelaySeconds),
+
+            ( F < Frames ->
+                cursor_up(TotalLines),
+                flush_output
+            ; true )
+        )
+    ),
+    cursor_show,
+    ansi_reset.
+
+range(A, B, L) :- findall(X, between(A, B, X), L).
+
+% índices fixos (porque logo_top_lines tem estrutura fixa)
+% 0..5   = QUEM
+% 7..12  = QUER
+% 14..19 = SER
+% 21..26 = MILIONARIO? (6 linhas do bloco final)
+intro_stage_indices(quem, Idxs) :-
+    range(0, 5, Idxs).
+intro_stage_indices(quer, Idxs) :-
+    range(7, 12, Idxs).
+intro_stage_indices(ser, Idxs) :-
+    range(14, 19, Idxs).
+intro_stage_indices(milionario, Idxs) :-
+    range(21, 26, Idxs).
+
+mostrar_logo_intro_partes :-
+    Use256 = true,
+    logo_lines(Full),
+
+    Delay = 0.06,
+    Frames is round(0.21 / Delay),  % ~0.5s por parte
+
+    intro_stage_indices(quem, K1),
+    mask_lines_by_index(Full, K1, L1),
+    animar_lines_frames(L1, Frames, Delay, Use256),
+
+    intro_stage_indices(quer, K2),
+    mask_lines_by_index(Full, K2, L2),
+    animar_lines_frames(L2, Frames, Delay, Use256),
+
+    intro_stage_indices(ser, K3),
+    mask_lines_by_index(Full, K3, L3),
+    animar_lines_frames(L3, Frames, Delay, Use256),
+
+    intro_stage_indices(milionario, K4),
+    mask_lines_by_index(Full, K4, L4),
+    animar_lines_frames(L4, Frames, Delay, Use256).

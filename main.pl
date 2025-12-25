@@ -41,8 +41,15 @@ menu_principal :-
     tocar_som_main_menu,
     % estrelas a piscar um bocadinho
   %  starfield_run(1.5),
-    mostrar_logo_animado,
-    mostrar_menu_principal,
+
+  %  mostrar_logo_animado,
+  %  mostrar_menu_principal,
+
+    ascii_logo:mostrar_logo_intro_partes,  % intro por partes
+limpar_tela,                           % opcional, mas fica mais limpo antes do menu
+mostrar_logo_animado,                  % como já tinhas (logo completo)
+mostrar_menu_principal,
+
 
 
   
