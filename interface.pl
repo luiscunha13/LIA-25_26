@@ -4,6 +4,7 @@
 :- use_module(ascii_logo).  % se estiver na mesma pasta
 
 
+:- use_module(library(tty)).   % tty_set_raw/2
 
 
 :- use_module(library(random)).
@@ -425,6 +426,543 @@ mostrar_menu_principal :-
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+% ============================
+% INPUT: teclas (setas/enter)
+% ============================
+
+% ============================
+% INPUT: teclas (setas/enter) - RAW + leitura de sequências ANSI
+% ============================
+
+hide_cursor :- write('\033[?25l'), flush_output.
+show_cursor :- write('\033[?25h'), flush_output.
+
+with_raw_input(Goal) :-
+    setup_call_cleanup(
+        (   % raw + noecho (stty) + cursor escondido
+            ( current_predicate(tty_set_raw/2) ->
+                tty_set_raw(user_input, Old)
+            ;   Old = none
+            ),
+            catch(process_create(path(stty), ['-echo'], []), _, true),
+            set_stream(user_input, buffer(false)),
+            hide_cursor
+        ),
+        Goal,
+        (   show_cursor,
+            catch(process_create(path(stty), ['echo'], []), _, true),
+            ( Old \= none -> tty_set_raw(user_input, Old) ; true )
+        )
+    ).
+
+
+% Lê 1 tecla "lógica": up/down/left/right/enter/esc/char(Code)
+read_key(Key) :-
+    get_single_char(C),
+    classify_key(C, Key).
+
+classify_key(10, enter) :- !.   % LF
+classify_key(13, enter) :- !.   % CR
+classify_key(27, Key) :- !,     % ESC ou sequência ANSI
+    % tenta ler resto da sequência rapidamente
+    wait_for_input([user_input], Ready, 0.01),
+    ( Ready == [] ->
+        Key = esc
+    ;   get_single_char(C1),
+        ( C1 =:= 91 ->  % '['
+            get_single_char(C2),
+            arrow_code(C2, Key)
+        ;   Key = esc
+        )
+    ).
+classify_key(C, char(C)).
+
+arrow_code(65, up)    :- !.  % A
+arrow_code(66, down)  :- !.  % B
+arrow_code(67, right) :- !.  % C
+arrow_code(68, left)  :- !.  % D
+arrow_code(_,  esc).         % fallback
+
+% Lê tecla com timeout (em segundos). Se não houver nada -> Key = none
+read_key_timeout(Timeout, Key) :-
+    wait_for_input([user_input], Ready, Timeout),
+    ( Ready == [] ->
+        Key = none
+    ;   read_key(Key)
+    ).
+
+
+% ============================
+% MENU PRINCIPAL com setas
+% ============================
+
+% Linha onde começa a caixa do menu (ajusta se precisares)
+menu_box_row(26).
+
+draw_menu_only(Options, SelIdx) :-
+    menu_box_row(R0),
+    cursor_pos(R0, 1),
+    write('\033[J'),   % limpa do cursor até ao fim (só a zona do menu)
+    flush_output,
+
+    ansi_fg_blue_dark,
+    print_centered_block_h(["╔═══════════════════════════════════════════════════════════════╗"]),
+    draw_menu_lines(Options, SelIdx, 1),
+    print_centered_block_h(["╚═══════════════════════════════════════════════════════════════╝"]),
+    ansi_fg_reset_only,
+
+    nl,
+    shimmer_fg_white,
+    write("Use ↑/↓ e ENTER"),
+    ansi_fg_reset_only,
+    nl,
+    flush_output.
+
+
+menu_principal_setas(OpcaoStr) :-
+    Options = ["Novo Jogo", "Ranking", "Regras / Info", "Sair"],
+    with_raw_input((
+        draw_menu_principal_full(Options, 1),
+        menu_loop_principal_anim(Options, 1, 0, IdxFinal)
+    )),
+    number_string(IdxFinal, OpcaoStr).
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+% ============================
+% MENU MODO com setas
+% ============================
+
+% Reaproveita o teu menu_modo_block/1 (já existe) para obter o título
+menu_modo_title(Title) :-
+    menu_modo_block(Lines),
+    length(Title, 12),              % <-- o teu Title tem 12 linhas
+    append(Title, _Box, Lines).
+
+draw_menu_modo_full(Options, SelIdx) :-
+    limpar_tela,
+    menu_modo_title(Title),
+    ansi_fg_blue_dark,
+    print_centered_block_h(Title),
+    ansi_fg_reset_only,
+    nl,
+
+    ansi_fg_blue_dark,
+    print_centered_block_h(["╔════════════════════════════════════════════════════════════════╗"]),
+    draw_menu_lines(Options, SelIdx, 1),
+    print_centered_block_h(["╚════════════════════════════════════════════════════════════════╝"]),
+    ansi_fg_reset_only,
+
+    nl,
+    shimmer_fg_white, write("Use ↑/↓ e ENTER"), ansi_fg_reset_only,
+    nl,
+    flush_output.
+
+menu_loop_generic(Options, Idx0, IdxFinal) :-
+    read_key_timeout(0.05, K),
+    (   K = up
+    ->  length(Options, N),
+        ( Idx0 =:= 1 -> Idx1 = N ; Idx1 is Idx0 - 1 ),
+        Idx2 = Idx1,
+        Idx3 = Idx2,
+        Idx4 = Idx3,
+        Idx5 = Idx4,
+        Idx6 = Idx5,
+        Idx7 = Idx6,
+        Idx8 = Idx7,
+        % redesenha fora (no caller)
+        IdxNext = Idx8,
+        IdxFinal = _,
+        fail
+    ;   K = down
+    ->  length(Options, N),
+        ( Idx0 =:= N -> Idx1 = 1 ; Idx1 is Idx0 + 1 ),
+        IdxNext = Idx1,
+        IdxFinal = _,
+        fail
+    ;   K = enter
+    ->  IdxFinal = Idx0
+    ;   (K = char(113) ; K = esc)    % 'q' ou ESC -> volta atrás/sai
+    ->  IdxFinal = 0
+    ;   % none ou outra tecla
+        IdxFinal = _,
+        fail
+    ),
+    IdxNext = Idx0.  % só para evitar warnings (não usado)
+
+menu_loop_modo(Options, Idx0, IdxFinal) :-
+    read_key_timeout(0.05, K),
+    (   K = up
+    ->  length(Options, N),
+        ( Idx0 =:= 1 -> Idx1 = N ; Idx1 is Idx0 - 1 ),
+        draw_menu_modo_full(Options, Idx1),
+        menu_loop_modo(Options, Idx1, IdxFinal)
+    ;   K = down
+    ->  length(Options, N),
+        ( Idx0 =:= N -> Idx1 = 1 ; Idx1 is Idx0 + 1 ),
+        draw_menu_modo_full(Options, Idx1),
+        menu_loop_modo(Options, Idx1, IdxFinal)
+    ;   K = enter
+    ->  IdxFinal = Idx0
+    ;   (K = char(113) ; K = esc)
+    ->  IdxFinal = 0
+    ;   menu_loop_modo(Options, Idx0, IdxFinal)
+    ).
+
+menu_modo_setas(Modo) :-
+    Options = ["Treino", "Rápido", "Competitivo"],
+    with_raw_input((
+        draw_menu_modo_full(Options, 1),
+        menu_loop_modo(Options, 1, IdxFinal)
+    )),
+    modo_por_idx(IdxFinal, Modo).
+
+modo_por_idx(1, treino).
+modo_por_idx(2, rapido).
+modo_por_idx(3, competitivo).
+modo_por_idx(0, back).   % ESC ou Q
+
+
+% ============================
+% MENU TEMA com setas
+% ============================
+
+menu_tema_title(Title) :-
+    menu_tema_block(Lines),
+    length(Title, 12),              % <-- o teu Title também tem 12 linhas
+    append(Title, _Box, Lines).
+
+draw_menu_tema_full(Options, SelIdx) :-
+    limpar_tela,
+    menu_tema_title(Title),
+    ansi_fg_blue_dark,
+    print_centered_block_h(Title),
+    ansi_fg_reset_only,
+    nl,
+
+    ansi_fg_blue_dark,
+    print_centered_block_h(["╔════════════════════════════════════════════════════════════════╗"]),
+    draw_menu_lines(Options, SelIdx, 1),
+    print_centered_block_h(["╚════════════════════════════════════════════════════════════════╝"]),
+    ansi_fg_reset_only,
+
+    nl,
+    shimmer_fg_white, write("Use ↑/↓ e ENTER"), ansi_fg_reset_only,
+    nl,
+    flush_output.
+
+menu_loop_tema(Options, Idx0, IdxFinal) :-
+    read_key_timeout(0.05, K),
+    (   K = up
+    ->  length(Options, N),
+        ( Idx0 =:= 1 -> Idx1 = N ; Idx1 is Idx0 - 1 ),
+        draw_menu_tema_full(Options, Idx1),
+        menu_loop_tema(Options, Idx1, IdxFinal)
+    ;   K = down
+    ->  length(Options, N),
+        ( Idx0 =:= N -> Idx1 = 1 ; Idx1 is Idx0 + 1 ),
+        draw_menu_tema_full(Options, Idx1),
+        menu_loop_tema(Options, Idx1, IdxFinal)
+    ;   K = enter
+    ->  IdxFinal = Idx0
+    ;   (K = char(113) ; K = esc)
+    ->  IdxFinal = 0
+    ;   menu_loop_tema(Options, Idx0, IdxFinal)
+    ).
+
+menu_tema_setas(Tema) :-
+    Options = ["Cultura Geral", "Futebol", "Cultura Portuguesa"],
+    with_raw_input((
+        draw_menu_tema_full(Options, 1),
+        menu_loop_tema(Options, 1, IdxFinal)
+    )),
+    tema_por_idx(IdxFinal, Tema).
+
+tema_por_idx(1, geral).
+tema_por_idx(2, futebol).
+tema_por_idx(3, cultura_portuguesa).
+tema_por_idx(0, back).   % ESC ou Q
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+% ============================
+% ECRÃ COMPOSTO: MODO (fixo em cima) + TEMA (navegável em baixo)
+% ============================
+
+draw_modo_tema_full(ModoOptions, ModoSelIdx, TemaOptions, TemaSelIdx) :-
+    limpar_tela,
+
+    % --- MODO em cima ---
+    menu_modo_title(TitleModo),
+    ansi_fg_blue_dark,
+    print_centered_block_h(TitleModo),
+    ansi_fg_reset_only,
+    nl,
+
+    ansi_fg_blue_dark,
+    print_centered_block_h(["╔════════════════════════════════════════════════════════════════╗"]),
+    draw_menu_lines(ModoOptions, ModoSelIdx, 1),
+    print_centered_block_h(["╚════════════════════════════════════════════════════════════════╝"]),
+    ansi_fg_reset_only,
+
+    % espaço para “respirar” e preencher ecrã
+    nl, nl,
+
+    % --- TEMA em baixo ---
+    menu_tema_title(TitleTema),
+    ansi_fg_blue_dark,
+    print_centered_block_h(TitleTema),
+    ansi_fg_reset_only,
+    nl,
+
+    ansi_fg_blue_dark,
+    print_centered_block_h(["╔════════════════════════════════════════════════════════════════╗"]),
+    draw_menu_lines(TemaOptions, TemaSelIdx, 1),
+    print_centered_block_h(["╚════════════════════════════════════════════════════════════════╝"]),
+    ansi_fg_reset_only,
+
+    nl,
+    shimmer_fg_white,
+    write("Use ↑/↓ e ENTER (ESC/Q para voltar)"),
+    ansi_fg_reset_only,
+    nl,
+    flush_output.
+
+
+menu_loop_tema_com_modo(ModoOptions, ModoSelIdx, TemaOptions, TemaIdx0, TemaIdxFinal) :-
+    read_key_timeout(0.05, K),
+    (   K = up
+    ->  length(TemaOptions, N),
+        ( TemaIdx0 =:= 1 -> TemaIdx1 = N ; TemaIdx1 is TemaIdx0 - 1 ),
+        draw_modo_tema_full(ModoOptions, ModoSelIdx, TemaOptions, TemaIdx1),
+        menu_loop_tema_com_modo(ModoOptions, ModoSelIdx, TemaOptions, TemaIdx1, TemaIdxFinal)
+
+    ;   K = down
+    ->  length(TemaOptions, N),
+        ( TemaIdx0 =:= N -> TemaIdx1 = 1 ; TemaIdx1 is TemaIdx0 + 1 ),
+        draw_modo_tema_full(ModoOptions, ModoSelIdx, TemaOptions, TemaIdx1),
+        menu_loop_tema_com_modo(ModoOptions, ModoSelIdx, TemaOptions, TemaIdx1, TemaIdxFinal)
+
+    ;   K = enter
+    ->  TemaIdxFinal = TemaIdx0
+
+    ;   (K = char(113) ; K = esc)
+    ->  TemaIdxFinal = 0
+
+    ;   menu_loop_tema_com_modo(ModoOptions, ModoSelIdx, TemaOptions, TemaIdx0, TemaIdxFinal)
+    ).
+
+
+% Menu Tema que mantém o Modo visível em cima
+menu_tema_setas_com_modo(ModoSelIdx, Tema) :-
+    ModoOptions = ["Treino", "Rápido", "Competitivo"],
+    TemaOptions = ["Cultura Geral", "Futebol", "Cultura Portuguesa"],
+    with_raw_input((
+        draw_modo_tema_full(ModoOptions, ModoSelIdx, TemaOptions, 1),
+        menu_loop_tema_com_modo(ModoOptions, ModoSelIdx, TemaOptions, 1, TemaIdxFinal)
+    )),
+    tema_por_idx(TemaIdxFinal, Tema).
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+% Variante que devolve também o índice (para fixar o highlight do modo no ecrã composto)
+menu_modo_setas_idx(ModoSelIdx, Modo) :-
+    Options = ["Treino", "Rápido", "Competitivo"],
+    with_raw_input((
+        draw_menu_modo_full(Options, 1),
+        menu_loop_modo(Options, 1, IdxFinal)
+    )),
+    ModoSelIdx = IdxFinal,
+    modo_por_idx(IdxFinal, Modo).
+
+
+
+
+
+
+menu_loop_principal_anim(Options, Idx0, Phase0, IdxFinal) :-
+    read_key_timeout(0.05, K),   % 50ms: responsivo e dá tempo para animar
+    (   K = none
+    ->  Phase1 is Phase0 + 1,
+        ascii_logo:redraw_logo_at_top(Phase1),
+        menu_loop_principal_anim(Options, Idx0, Phase1, IdxFinal)
+
+    ;   K = up
+    ->  length(Options, N),
+      
+        ( Idx0 =:= 1 -> Idx1 = N ; Idx1 is Idx0 - 1 ),
+
+        draw_menu_only(Options, Idx1),
+        menu_loop_principal_anim(Options, Idx1, Phase0, IdxFinal)
+
+    ;   K = down
+    ->  length(Options, N),
+    
+
+        ( Idx0 =:= N -> Idx1 = 1 ; Idx1 is Idx0 + 1 ),
+
+        draw_menu_only(Options, Idx1),
+        menu_loop_principal_anim(Options, Idx1, Phase0, IdxFinal)
+
+    ;   K = enter
+    ->  IdxFinal = Idx0
+
+    ;   (K = char(113) ; K = esc)
+    ->  IdxFinal = 4
+
+    ;   menu_loop_principal_anim(Options, Idx0, Phase0, IdxFinal)
+    ).
+
+
+
+draw_menu_principal_with_selection(Options, SelIdx) :-
+    % em vez de limpar o ecrã, volta ao topo e redesenha por cima
+    cursor_pos(1,1),
+    write('\033[0J'),              % limpa do cursor até ao fim
+    flush_output,
+
+    ascii_logo:mostrar_logo,       % <-- LOGO ESTÁTICO (sem delays)
+    nl,
+
+    menu_principal_title(Title),
+    ansi_fg_blue_dark,
+    print_centered_block(Title),
+    ansi_fg_reset_only,
+    nl,
+
+    ansi_fg_blue_dark,
+    print_centered_block_h(["╔════════════════════════════════════════════════════════════════╗"]),
+    draw_menu_lines(Options, SelIdx, 1),
+    print_centered_block_h(["╚════════════════════════════════════════════════════════════════╝"]),
+    ansi_fg_reset_only,
+
+    nl,
+    shimmer_fg_white,
+    write("Use ↑/↓ e ENTER"),
+    ansi_fg_reset_only,
+    nl,
+    flush_output.
+
+
+menu_principal_title(Title) :-
+    Title = [
+        "███╗   ███╗███████╗███╗   ██╗██╗   ██╗",
+        "████╗ ████║██╔════╝████╗  ██║██║   ██║",
+        "██╔████╔██║█████╗  ██╔██╗ ██║██║   ██║",
+        "██║╚██╔╝██║██╔══╝  ██║╚██╗██║██║   ██║",
+        "██║ ╚═╝ ██║███████╗██║ ╚████║╚██████╔╝",
+        "╚═╝     ╚═╝╚══════╝╚═╝  ╚═══╝ ╚═════╝ ",
+        "██████╗ ██████╗ ██╗███╗   ██╗ ██████╗██╗██████╗  █████╗ ██╗     ",
+        "██╔══██╗██╔══██╗██║████╗  ██║██╔════╝██║██╔══██╗██╔══██╗██║     ",
+        "██████╔╝██████╔╝██║██╔██╗ ██║██║     ██║██████╔╝███████║██║     ",
+        "██╔═══╝ ██╔══██╗██║██║╚██╗██║██║     ██║██╔═══╝ ██╔══██║██║     ",
+        "██║     ██║  ██║██║██║ ╚████║╚██████╗██║██║     ██║  ██║███████╗",
+        "╚═╝     ╚═╝  ╚═╝╚═╝╚═╝  ╚═══╝ ╚═════╝╚═╝╚═╝     ╚═╝  ╚═╝╚══════╝"
+    ].
+
+draw_menu_lines([], _Sel, _I).
+draw_menu_lines([Opt|Rest], Sel, I) :-
+    % Marca a opção seleccionada (seta + inverse video no texto)
+    ( I =:= Sel ->
+        % inverse video só no texto (fica "highlight")
+        format(string(Line),
+               "║  \033[7m ▶ ~w\033[27m~*| ║",
+               [Opt, 59])  % padding à direita (ajusta se precisares)
+    ;   format(string(Line),
+               "║    ~w~*| ║",
+               [Opt, 62])
+    ),
+    print_centered_block_h([Line]),
+    I1 is I + 1,
+    draw_menu_lines(Rest, Sel, I1).
+
+
+
+
+
+draw_menu_principal_full(Options, SelIdx) :-
+    limpar_tela,
+    ascii_logo:mostrar_logo,   % desenha estático 1 vez
+    nl,
+    menu_principal_title(Title),
+    ansi_fg_blue_dark,
+    print_centered_block_h(Title),
+    ansi_fg_reset_only,
+    nl,
+    ansi_fg_blue_dark,
+    print_centered_block_h(["╔════════════════════════════════════════════════════════════════╗"]),
+    draw_menu_lines(Options, SelIdx, 1),
+    print_centered_block_h(["╚════════════════════════════════════════════════════════════════╝"]),
+    ansi_fg_reset_only,
+    nl,
+    shimmer_fg_white, write("Use ↑/↓ e ENTER"), ansi_fg_reset_only,
+    nl,
+    flush_output.
+
+
+
+
+
+
+
+
+
+
+
+
+
 menu_principal_block(Lines) :-
     Title = [
         "███╗   ███╗███████╗███╗   ██╗██╗   ██╗",
@@ -459,6 +997,12 @@ mostrar_menu_modo :-
     print_centered_block_shimmer(Lines, 12, 18, 8, 0.05),
     nl,
     write('Escolha uma opção: ').
+
+
+
+
+
+
 
 menu_modo_block(Lines) :-
     Title = [

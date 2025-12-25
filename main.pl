@@ -54,8 +54,12 @@ mostrar_menu_principal,
 
   
 
-    ler_opcao_menu_principal(Opcao), 
-    tratar_menu_principal(Opcao).
+%    ler_opcao_menu_principal(Opcao), 
+  %  tratar_menu_principal(Opcao).
+
+    menu_principal_setas(Opcao),
+tratar_menu_principal(Opcao).
+
 
 
 % Lê a opção enquanto vai redesenhando o logo (até 15 "ciclos" de animação)
@@ -190,28 +194,20 @@ tratar_escolha_tema(_, Tema) :-
 
 
 
-
 escolher_modo_e_tema(Modo, Tema) :-
     limpar_tela,
-    mostrar_menu_modo,
-    read_line_to_string(user_input, X),
-    (   tratar_escolha_modo(X, Modo)
-    ->  true
-    ;   writeln('❌ Escolha inválida!'),
-        sleep(1),
-        escolher_modo_e_tema(Modo, Tema)
-    ),
-    % aqui já NÃO limpas o ecrã — imprimes o tema por baixo
-  %  format('~nModo escolhido: ~w~n', [Modo]),
-    mostrar_menu_tema_abaixo,
-    read_line_to_string(user_input, EscolhaTema),
-    (   tratar_escolha_tema(EscolhaTema, Tema)
-    ->  true
-    ;   writeln('❌ Escolha inválida! Selecione 1, 2 ou 3.'),
-        sleep(1),
-        % volta só a pedir o tema (mantendo a info do modo)
-        escolher_tema_abaixo(Tema)
+    menu_modo_setas_idx(IdxModo, MSel),
+    (   MSel = back
+    ->  menu_principal
+    ;   Modo = MSel,
+        % agora o tema aparece EM BAIXO, mantendo o modo em cima
+        menu_tema_setas_com_modo(IdxModo, TSel),
+        (   TSel = back
+        ->  escolher_modo_e_tema(Modo, Tema)
+        ;   Tema = TSel
+        )
     ).
+
 
 escolher_tema_abaixo(Tema) :-
     mostrar_menu_tema_abaixo,
