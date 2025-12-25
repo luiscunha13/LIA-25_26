@@ -23,6 +23,9 @@ ansi_fg_yellow :- write('\033[33m').     % amarelo “normal”
 ansi_fg_yellow_bright :- write('\033[93m'). % amarelo brilhante (se o terminal suportar)
 
 
+ansi_fg_blue_dark :- write('\033[38;5;20m').
+
+
 draw_star(R, C, bright) :-
     cursor_pos(R, C),
     ansi_bg_black,
@@ -413,9 +416,14 @@ print_lines_shimmer([L|Ls], Left, Idx, TitleN, K, BeamW) :-
 
 mostrar_menu_principal :-
     menu_principal_block(Lines),
+    ansi_fg_blue_dark,
     print_centered_block(Lines),
+    ansi_fg_reset_only,
     nl,
     write('Escolha uma opção: ').
+
+
+
 
 menu_principal_block(Lines) :-
     Title = [

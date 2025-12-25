@@ -464,7 +464,7 @@ mostrar_logo_intro_partes :-
     logo_lines(Full),
 
     Delay = 0.06,
-    Frames is round(0.21 / Delay),  % ~0.5s por parte
+    Frames is round(0.215 / Delay),  % ~0.5s por parte
 
     intro_stage_indices(quem, K1),
     mask_lines_by_index(Full, K1, L1),
