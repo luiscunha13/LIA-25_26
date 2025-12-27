@@ -48,6 +48,18 @@ tocar_som_vitoria :-
         ['-c', 'ffplay -nodisp -autoexit -loglevel quiet SoundEffects/vitoria.mp3 >/dev/null 2>&1'],
         [detached(true)]).
 
+tocar_som_correta :-
+    % toca uma vez (não guardar PID)
+    process_create(path(sh),
+        ['-c', 'ffplay -nodisp -autoexit -loglevel quiet SoundEffects/correta.mp3 >/dev/null 2>&1'],
+        [detached(true)]).
+
+tocar_som_errada :-
+    % toca uma vez (não guardar PID)
+    process_create(path(sh),
+        ['-c', 'ffplay -nodisp -autoexit -loglevel quiet SoundEffects/errada.mp3 >/dev/null 2>&1'],
+        [detached(true)]).
+
 tocar_som_primeiro_menu :-
     stop_all_loops,
     start_loop('while true; do ffplay -nodisp -autoexit -loglevel quiet SoundEffects/primeiro_menu.mp3 >/dev/null 2>&1; done').
